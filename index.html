@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>[PV] Dashboard Lançamento SRI Maio</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    :root {
+      --bg:#0b1525; --card:#131f30; --card2:#182538; --border:#1e3045;
+      --cyan:#00c6ff; --cyan2:#0072ff; --green:#00e5a0; --yellow:#ffd166;
+      --red:#ff6b6b; --purple:#a78bfa; --orange:#f97316;
+      --text:#f0f4f8; --sub:#7a90a8; --sub2:#3d5472; --grid:rgba(30,48,69,0.8);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;padding-bottom:48px;}
+
+    /* Header */
+    header{background:linear-gradient(135deg,#0b1525,#0d2040);border-bottom:1px solid var(--border);padding:18px 36px;display:flex;align-items:center;justify-content:space-between;}
+    .h-title{font-size:17px;font-weight:700;}
+    .h-title span{background:linear-gradient(90deg,var(--cyan),var(--cyan2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .h-sub{font-size:12px;color:var(--sub);margin-top:3px;}
+    .badge{display:inline-flex;align-items:center;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--sub);margin-left:8px;}
+    .badge.live{border-color:var(--green);color:var(--green);}
+    .badge.live::before{content:'● ';font-size:8px;margin-right:4px;}
+
+    /* Filter bar */
+    .filter-bar{background:#0c1828;border-bottom:1px solid var(--border);padding:10px 36px;}
+    .filter-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:10px;}
+    .filter-lbl{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+    .f-btns{display:flex;gap:6px;}
+    .f-btn{padding:5px 16px;font-size:12px;font-weight:600;background:var(--card);border:1px solid var(--border);border-radius:20px;color:var(--sub);cursor:pointer;transition:all .2s;}
+    .f-btn:hover{color:var(--text);border-color:var(--sub2);}
+    .f-btn.active{background:rgba(0,198,255,0.12);border-color:var(--cyan);color:var(--cyan);}
+
+    /* Gauge section */
+    .gauge-section{background:#0c1828;border-bottom:1px solid var(--border);padding:22px 36px 18px;}
+    .gauge-outer{max-width:1400px;margin:0 auto;}
+    .gauge-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:14px;}
+    .gauge-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px 14px;text-align:center;position:relative;}
+    .gc-cyan{border-top:2px solid var(--cyan);}
+    .gc-green{border-top:2px solid var(--green);}
+    .gc-purple{border-top:2px solid var(--purple);}
+    .gauge-ttl{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--sub);margin-bottom:6px;}
+    .gauge-canvas-wrap{position:relative;height:120px;margin:0 auto;max-width:260px;}
+    .gauge-overlay{position:absolute;bottom:0;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;width:130px;}
+    .gauge-pct{font-size:28px;font-weight:800;line-height:1;}
+    .gauge-pct.cyan{color:var(--cyan);} .gauge-pct.green{color:var(--green);} .gauge-pct.purple{color:var(--purple);}
+    .gauge-pct-lbl{font-size:9px;color:var(--sub);letter-spacing:1.5px;text-transform:uppercase;}
+    .gauge-range{display:flex;justify-content:space-between;font-size:10px;color:var(--sub2);margin-top:2px;padding:0 4px;}
+    .gauge-stats{display:flex;justify-content:center;gap:18px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+    .gauge-stats>div{text-align:center;}
+    .gauge-stats span{display:block;font-size:9px;color:var(--sub);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;}
+    .gauge-stats strong{font-size:16px;font-weight:800;color:var(--text);}
+
+    /* Summary row */
+    .sum-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+    .sum-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+    .sum-lbl{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px;}
+    .sum-meta{font-size:10px;color:var(--sub2);margin-bottom:4px;}
+    .sum-val{font-size:18px;font-weight:800;}
+    .sum-val.cyan{color:var(--cyan);} .sum-val.green{color:var(--green);} .sum-val.yellow{color:var(--yellow);} .sum-val.sub{color:var(--sub);}
+    .sum-sub{font-size:10px;color:var(--sub);margin-top:3px;}
+
+    /* Tabs */
+    .tab-btn{padding:7px 18px;font-size:12px;font-weight:700;color:var(--sub);background:var(--card);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;letter-spacing:0.2px;}
+    .tab-btn:hover{color:var(--text);border-color:var(--sub2);}
+    .tab-btn.active{color:var(--bg);background:var(--cyan);border-color:var(--cyan);}
+    .tab-panel{display:none;}
+    .tab-panel.active{display:block;}
+
+    /* Container */
+    .container{max-width:1400px;margin:0 auto;padding:24px 36px 0;}
+    .sec{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--sub);margin-bottom:14px;}
+
+    /* KPI grid */
+    .kpi-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:24px;}
+    .kpi-grid.six{grid-template-columns:repeat(6,1fr);}
+    .kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 14px 12px;}
+    .kpi.c-cyan{border-left:3px solid var(--cyan);}
+    .kpi.c-green{border-left:3px solid var(--green);}
+    .kpi.c-yellow{border-left:3px solid var(--yellow);}
+    .kpi.c-purple{border-left:3px solid var(--purple);}
+    .kpi-lbl{font-size:10px;color:var(--sub);font-weight:500;letter-spacing:.5px;margin-bottom:8px;}
+    .kpi-val{font-size:23px;font-weight:800;line-height:1;}
+    .kpi-val.cyan{color:var(--cyan);} .kpi-val.green{color:var(--green);} .kpi-val.yellow{color:var(--yellow);} .kpi-val.purple{color:var(--purple);} .kpi-val.white{color:var(--text);}
+    .kpi-note{font-size:10px;color:var(--sub);margin-top:4px;}
+
+    /* Charts */
+    .row2{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:18px;}
+    .row2b{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px;}
+    .chart-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 18px 14px;}
+    .chart-ttl{font-size:13px;font-weight:700;margin-bottom:2px;}
+    .chart-sub{font-size:11px;color:var(--sub);margin-bottom:14px;}
+    .chart-wrap{position:relative;}
+    .h200{height:200px;} .h240{height:240px;} .h260{height:260px;}
+
+    /* Table */
+    .tbl-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:10px;overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;font-size:12.5px;}
+    thead th{text-align:left;padding:9px 10px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--sub);border-bottom:1px solid var(--border);}
+    tbody tr{border-bottom:1px solid #162030;transition:background .15s;}
+    tbody tr:hover{background:#162030;}
+    tbody tr:last-child{border-bottom:none;}
+    tbody td{padding:9px 10px;vertical-align:middle;}
+    .td-r{text-align:right;font-variant-numeric:tabular-nums;}
+    .td-criativo{color:var(--cyan);font-weight:600;font-size:11.5px;}
+    .td-pub{color:var(--purple);font-size:11.5px;}
+    .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:600;}
+    .pill-g{background:rgba(0,229,160,0.12);color:var(--green);}
+    .pill-y{background:rgba(255,209,102,0.12);color:var(--yellow);}
+    .pill-r{background:rgba(255,107,107,0.12);color:var(--red);}
+    .pill-b{background:rgba(0,198,255,0.12);color:var(--cyan);}
+
+    /* Sort */
+    .sortable{cursor:pointer;user-select:none;white-space:nowrap;}
+    .sortable:hover{color:var(--text);}
+    .sa{font-size:10px;color:var(--sub2);margin-left:3px;}
+    .sa.on{color:var(--cyan);}
+
+    /* Instagram button */
+    .ig-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(0,198,255,0.07);border:1px solid rgba(0,198,255,0.22);border-radius:7px;color:var(--cyan);font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;white-space:nowrap;}
+    .ig-btn:hover{background:rgba(0,198,255,0.18);border-color:var(--cyan);}
+    .ig-btn svg{width:12px;height:12px;flex-shrink:0;}
+
+    .note{text-align:center;font-size:11px;color:var(--sub2);margin-top:12px;padding:0 36px;}
+
+    @media(max-width:1200px){
+      .gauge-grid,.sum-grid{grid-template-columns:repeat(2,1fr);}
+      .kpi-grid{grid-template-columns:repeat(4,1fr);}
+      .kpi-grid.six{grid-template-columns:repeat(3,1fr);}
+      .row2,.row2b,.row3{grid-template-columns:1fr;}
+    }
+    @media(max-width:700px){
+      .gauge-grid,.sum-grid,.kpi-grid,.kpi-grid.six{grid-template-columns:repeat(2,1fr);}
+      .container,.gauge-section,.filter-bar{padding-left:14px;padding-right:14px;}
+      header{padding:14px;}
+      .tabs-bar{padding:10px 14px 0;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div>
+    <div class="h-title">[PV] Dashboard Lançamento <span>SRI Maio</span></div>
+    <div class="h-sub">Período: 29/04 – 04/05/2026 · Fonte: Google Sheets</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <button class="tab-btn active" onclick="switchTab('ebook',this)">📘 Facebook Ebook</button>
+    <button class="tab-btn" onclick="switchTab('captacao',this)">🎯 Facebook Captação</button>
+    <span class="badge">Facebook Ads</span>
+    <span class="badge live">04/05/2026</span>
+  </div>
+</header>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <div class="filter-inner">
+    <span class="filter-lbl">Período</span>
+    <div class="f-btns">
+      <button class="f-btn active" onclick="applyFilter(null,this)">Total</button>
+      <button class="f-btn" onclick="applyFilter(3,this)">3 Dias</button>
+      <button class="f-btn" onclick="applyFilter(7,this)">7 Dias</button>
+      <button class="f-btn" onclick="applyFilter(14,this)">14 Dias</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAUGES -->
+<div class="gauge-section">
+  <div class="gauge-outer">
+    <p class="sec" style="margin-bottom:14px">Progresso de Leads</p>
+    <div class="gauge-grid">
+
+      <div class="gauge-card gc-cyan">
+        <p class="gauge-ttl">Geral</p>
+        <div class="gauge-canvas-wrap"><canvas id="g-geral"></canvas>
+          <div class="gauge-overlay">
+            <div class="gauge-pct cyan" id="gv-geral">—</div>
+            <div class="gauge-pct-lbl">atingido</div>
+          </div>
+        </div>
+        <div class="gauge-range"><span>0</span><span id="gr-geral">Meta: 1.300</span></div>
+        <div class="gauge-stats">
+          <div><span>Atual</span><strong id="gs-atual-geral">—</strong></div>
+          <div><span>Meta</span><strong>1.300</strong></div>
+          <div><span>Média/dia</span><strong id="gs-media-geral">—</strong></div>
+        </div>
+      </div>
+
+      <div class="gauge-card gc-green">
+        <p class="gauge-ttl">Ebook</p>
+        <div class="gauge-canvas-wrap"><canvas id="g-ebook"></canvas>
+          <div class="gauge-overlay">
+            <div class="gauge-pct green" id="gv-ebook">—</div>
+            <div class="gauge-pct-lbl">atingido</div>
+          </div>
+        </div>
+        <div class="gauge-range"><span>0</span><span>Meta: 550 · R$366</span></div>
+        <div class="gauge-stats">
+          <div><span>Atual</span><strong id="gs-atual-eb">—</strong></div>
+          <div><span>Meta</span><strong>550</strong></div>
+          <div><span>Média/dia</span><strong id="gs-media-eb">—</strong></div>
+        </div>
+      </div>
+
+      <div class="gauge-card gc-purple">
+        <p class="gauge-ttl">Captação</p>
+        <div class="gauge-canvas-wrap"><canvas id="g-captacao"></canvas>
+          <div class="gauge-overlay">
+            <div class="gauge-pct purple" id="gv-cap">—</div>
+            <div class="gauge-pct-lbl">atingido</div>
+          </div>
+        </div>
+        <div class="gauge-range"><span>0</span><span>Meta: 750 · R$375</span></div>
+        <div class="gauge-stats">
+          <div><span>Atual</span><strong id="gs-atual-cap">—</strong></div>
+          <div><span>Meta</span><strong>750</strong></div>
+          <div><span>Média/dia</span><strong id="gs-media-cap">—</strong></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="sum-grid">
+      <div class="sum-card">
+        <p class="sum-lbl">Orçamento Total</p>
+        <p class="sum-meta">Ebook R$366 + Captação R$375</p>
+        <p class="sum-val cyan">R$ 741,00</p>
+        <p class="sum-sub">Investido: <span id="sv-investido-total">—</span> · <span id="sv-pct-orc" style="color:var(--yellow);font-weight:700">—</span></p>
+      </div>
+      <div class="sum-card">
+        <p class="sum-lbl">Leads Ebook</p>
+        <p class="sum-meta">Meta: 550 · Orç: R$366,00</p>
+        <p class="sum-val green" id="sv-leads-eb">—</p>
+        <p class="sum-sub">CPL: <span id="sv-cpl-eb">—</span> · Investido: <span id="sv-invest-eb">—</span></p>
+      </div>
+      <div class="sum-card">
+        <p class="sum-lbl">CPL Ebook</p>
+        <p class="sum-meta">Real vs Meta R$1,50</p>
+        <p class="sum-val cyan" id="sv-cpl-eb2">—</p>
+        <p class="sum-sub" id="sv-cpl-status-eb">—</p>
+      </div>
+      <div class="sum-card">
+        <p class="sum-lbl">Leads Captação</p>
+        <p class="sum-meta">Meta: 750 · Orç: R$375,00</p>
+        <p class="sum-val sub" id="sv-leads-cap">—</p>
+        <p class="sum-sub">Investido: <span id="sv-invest-cap">—</span></p>
+      </div>
+      <div class="sum-card">
+        <p class="sum-lbl">Meta CPL Captação</p>
+        <p class="sum-meta">Referência de eficiência</p>
+        <p class="sum-val yellow">R$ 2,00</p>
+        <p class="sum-sub">Aguardando primeiros leads</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB EBOOK -->
+<div id="panel-ebook" class="tab-panel active">
+  <div class="container">
+    <p class="sec" style="padding-top:22px;margin-top:0">Visão Geral · PV_Cadastro_Site_Ebook_Renda</p>
+    <div class="kpi-grid">
+      <div class="kpi c-cyan"><p class="kpi-lbl">Investido</p><p class="kpi-val cyan" id="eb-k-invest">—</p><p class="kpi-note" id="eb-k-invest-n">—</p></div>
+      <div class="kpi c-green"><p class="kpi-lbl">Leads</p><p class="kpi-val green" id="eb-k-leads">—</p><p class="kpi-note" id="eb-k-leads-n">—</p></div>
+      <div class="kpi c-cyan"><p class="kpi-lbl">CPL</p><p class="kpi-val cyan" id="eb-k-cpl">—</p><p class="kpi-note">Custo por Lead</p></div>
+      <div class="kpi c-yellow"><p class="kpi-lbl">Cliques</p><p class="kpi-val yellow" id="eb-k-clicks">—</p><p class="kpi-note">Link Clicks</p></div>
+      <div class="kpi c-cyan"><p class="kpi-lbl">CPC</p><p class="kpi-val white" id="eb-k-cpc">—</p><p class="kpi-note">Custo por Clique</p></div>
+      <div class="kpi c-purple"><p class="kpi-lbl">Impressões</p><p class="kpi-val purple" id="eb-k-imp">—</p><p class="kpi-note">Total</p></div>
+      <div class="kpi c-cyan"><p class="kpi-lbl">CTR</p><p class="kpi-val white" id="eb-k-ctr">—</p><p class="kpi-note">Taxa de clique</p></div>
+    </div>
+    <p class="sec">Performance Diária</p>
+    <div class="row2">
+      <div class="chart-card">
+        <p class="chart-ttl">Leads por Dia · Ebook vs Captação + CPL</p>
+        <p class="chart-sub">Barras empilhadas por origem · Linha = CPL diário (R$)</p>
+        <div class="chart-wrap h260"><canvas id="eb-stacked"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <p class="chart-ttl">Distribuição por Criativo</p>
+        <p class="chart-sub">% do investimento no período</p>
+        <div class="chart-wrap h260"><canvas id="eb-donut"></canvas></div>
+      </div>
+    </div>
+    <p class="sec">Análise por Criativo</p>
+    <div class="row2b">
+      <div class="chart-card">
+        <p class="chart-ttl">Leads por Criativo</p>
+        <p class="chart-sub">Total no período selecionado</p>
+        <div class="chart-wrap h200"><canvas id="eb-leads-bar"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <p class="chart-ttl">CPL por Criativo</p>
+        <p class="chart-sub">Verde ≤ R$1,50 (meta) · Vermelho acima</p>
+        <div class="chart-wrap h200"><canvas id="eb-cpl-bar"></canvas></div>
+      </div>
+    </div>
+    <p class="sec">Detalhamento por Criativo</p>
+    <div class="tbl-card">
+      <table>
+        <thead id="eb-thead"><tr>
+          <th>Criativo</th>
+          <th class="td-r sortable" data-col="invest"  onclick="sortEb('invest')">Investido <span class="sa">↕</span></th>
+          <th class="td-r sortable" data-col="imp"     onclick="sortEb('imp')">Impressões <span class="sa">↕</span></th>
+          <th class="td-r sortable" data-col="clicks"  onclick="sortEb('clicks')">Cliques <span class="sa">↕</span></th>
+          <th class="td-r sortable" data-col="ctr"     onclick="sortEb('ctr')">CTR <span class="sa">↕</span></th>
+          <th class="td-r sortable" data-col="leads"   onclick="sortEb('leads')">Leads <span class="sa">↕</span></th>
+          <th class="td-r sortable" data-col="cpl"     onclick="sortEb('cpl')">CPL <span class="sa">↕</span></th>
+          <th>Status</th><th>Anúncio</th>
+        </tr></thead>
+        <tbody id="eb-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- TAB CAPTAÇÃO -->
+<div id="panel-captacao" class="tab-panel">
+  <div class="container">
+    <p class="sec" style="padding-top:22px;margin-top:0">Visão Geral · SRI_FB_Captacao_Cadastro_Maio · Início: 04/05/2026</p>
+    <div class="kpi-grid six">
+      <div class="kpi c-cyan"><p class="kpi-lbl">Investido</p><p class="kpi-val cyan" id="cap-k-invest">—</p><p class="kpi-note">—</p></div>
+      <div class="kpi c-yellow"><p class="kpi-lbl">Cliques</p><p class="kpi-val yellow" id="cap-k-clicks">—</p><p class="kpi-note">Link Clicks</p></div>
+      <div class="kpi c-cyan"><p class="kpi-lbl">CPC</p><p class="kpi-val white" id="cap-k-cpc">—</p><p class="kpi-note">Custo por Clique</p></div>
+      <div class="kpi c-purple"><p class="kpi-lbl">Impressões</p><p class="kpi-val purple" id="cap-k-imp">—</p><p class="kpi-note">Total</p></div>
+      <div class="kpi c-cyan"><p class="kpi-lbl">CTR</p><p class="kpi-val white" id="cap-k-ctr">—</p><p class="kpi-note">Taxa de clique</p></div>
+      <div class="kpi c-green"><p class="kpi-lbl">Leads</p><p class="kpi-val" style="color:var(--sub);font-size:14px">Em captação</p><p class="kpi-note">Recém lançada</p></div>
+    </div>
+    <p class="sec">Distribuição · Investimento &amp; Cliques</p>
+    <div class="row3">
+      <div class="chart-card"><p class="chart-ttl">Investimento por Criativo</p><p class="chart-sub">R$ alocado no período</p><div class="chart-wrap h240"><canvas id="cap-invest-bar"></canvas></div></div>
+      <div class="chart-card"><p class="chart-ttl">Cliques por Criativo</p><p class="chart-sub">Volume de link clicks</p><div class="chart-wrap h240"><canvas id="cap-clicks-bar"></canvas></div></div>
+      <div class="chart-card"><p class="chart-ttl">CTR por Criativo</p><p class="chart-sub">% cliques / impressões</p><div class="chart-wrap h240"><canvas id="cap-ctr-bar"></canvas></div></div>
+    </div>
+    <p class="sec">Distribuição por Público</p>
+    <div class="row2b">
+      <div class="chart-card"><p class="chart-ttl">Investimento por Público</p><p class="chart-sub">Alocação por segmentação</p><div class="chart-wrap h200"><canvas id="cap-pub-invest"></canvas></div></div>
+      <div class="chart-card"><p class="chart-ttl">Cliques por Público</p><p class="chart-sub">Performance por segmentação</p><div class="chart-wrap h200"><canvas id="cap-pub-clicks"></canvas></div></div>
+    </div>
+    <p class="sec">Detalhamento por Criativo</p>
+    <div class="tbl-card">
+      <table>
+        <thead id="cap-thead"><tr>
+          <th>Criativo</th><th>Público</th><th>Campanha</th>
+          <th class="td-r sortable" data-col="invest" onclick="sortCap('invest')">Investido <span class="sa">↕</span></th>
+          <th class="td-r sortable" data-col="imp"    onclick="sortCap('imp')">Impressões <span class="sa">↕</span></th>
+          <th class="td-r sortable" data-col="clicks" onclick="sortCap('clicks')">Cliques <span class="sa">↕</span></th>
+          <th class="td-r sortable" data-col="ctr"    onclick="sortCap('ctr')">CTR <span class="sa">↕</span></th>
+          <th>Leads</th><th>Anúncio</th>
+        </tr></thead>
+        <tbody id="cap-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<p class="note">Dados reais · "[PV] Fonte de Dados SRI Maio" · Metas: Ebook 550 leads R$366 · Captação 750 leads R$375 · Atualizado 04/05/2026</p>
+
+<script>
+/* ═══════════════════════════════════════
+   CONSTANTS & HELPERS
+═══════════════════════════════════════ */
+const C = { cyan:'#00c6ff',cyan2:'#0072ff',green:'#00e5a0',yellow:'#ffd166',red:'#ff6b6b',purple:'#a78bfa',orange:'#f97316',sub:'#7a90a8',grid:'rgba(30,48,69,0.8)' };
+const palette = [C.cyan,C.green,C.yellow,C.purple,C.red,C.orange,'#60a5fa'];
+Chart.defaults.color = C.sub;
+Chart.defaults.font.family = 'Inter';
+
+const igIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>`;
+
+function R(id){ return document.getElementById(id); }
+function set(id, v){ const el=R(id); if(el) el.textContent=v; }
+function fmtR(v){ return 'R$ '+v.toFixed(2).replace('.',','); }
+function fmtN(v){ return v.toLocaleString('pt-BR'); }
+
+/* Parse "DD/MM" → Date(2026) */
+function parseDate(s){ const [d,m]=s.split('/').map(Number); return new Date(2026,m-1,d); }
+
+const ALL_DATES = ['29/04','30/04','01/05','02/05','03/05','04/05'];
+const LATEST    = parseDate('04/05');
+
+function getFilteredDates(nDays){
+  if(!nDays) return ALL_DATES;
+  const cutoff = new Date(LATEST); cutoff.setDate(cutoff.getDate()-(nDays-1));
+  return ALL_DATES.filter(d => parseDate(d) >= cutoff);
+}
+function filterRows(rows, nDays){
+  if(!nDays) return rows;
+  const ok = new Set(getFilteredDates(nDays));
+  return rows.filter(r => ok.has(r.date));
+}
+
+/* ═══════════════════════════════════════
+   RAW DATA — EBOOK
+═══════════════════════════════════════ */
+const EB_ROWS = [
+  {date:'29/04',criativo:'AD01 · Segunda',        url:'https://www.instagram.com/p/DXzx0HRAFh6/',invest:2.22,imp:143,clicks:4, leads:1},
+  {date:'29/04',criativo:'AD03 · Próprio Caminho', url:'https://www.instagram.com/p/DXzx0LLAA-G/',invest:0.36,imp:26, clicks:1, leads:0},
+  {date:'29/04',criativo:'AD06 · Trabalhar Remoto',url:'https://www.instagram.com/p/DXzx0GGgLyG/',invest:0.01,imp:3,  clicks:0, leads:0},
+  {date:'30/04',criativo:'AD01 · Segunda',        url:'https://www.instagram.com/p/DXzx0HRAFh6/',invest:1.41,imp:72, clicks:8, leads:5},
+  {date:'30/04',criativo:'AD02 · Empreendedora',   url:'https://www.instagram.com/p/DXzx0LWAHXw/',invest:5.51,imp:385,clicks:8, leads:6},
+  {date:'30/04',criativo:'AD05 · Minha Mãe',       url:'https://www.instagram.com/p/DXzx0MrgHMu/',invest:2.10,imp:198,clicks:10,leads:4},
+  {date:'01/05',criativo:'AD01 · Segunda',        url:'https://www.instagram.com/p/DXzx0HRAFh6/',invest:0.15,imp:20, clicks:0, leads:0},
+  {date:'01/05',criativo:'AD02 · Empreendedora',   url:'https://www.instagram.com/p/DXzx0LWAHXw/',invest:0.76,imp:79, clicks:2, leads:0},
+  {date:'01/05',criativo:'AD03 · Próprio Caminho', url:'https://www.instagram.com/p/DXzx0LLAA-G/',invest:0.44,imp:49, clicks:2, leads:0},
+  {date:'01/05',criativo:'AD04 · Pilates',         url:'https://www.instagram.com/p/DXzx0M6AEFu/',invest:0.03,imp:4,  clicks:1, leads:1},
+  {date:'01/05',criativo:'AD05 · Minha Mãe',       url:'https://www.instagram.com/p/DXzx0MrgHMu/',invest:6.18,imp:499,clicks:19,leads:4},
+  {date:'01/05',criativo:'AD06 · Trabalhar Remoto',url:'https://www.instagram.com/p/DXzx0GGgLyG/',invest:0.25,imp:25, clicks:0, leads:0},
+  {date:'02/05',criativo:'AD03 · Próprio Caminho', url:'https://www.instagram.com/p/DXzx0LLAA-G/',invest:0.19,imp:21, clicks:0, leads:0},
+  {date:'02/05',criativo:'AD05 · Minha Mãe',       url:'https://www.instagram.com/p/DXzx0MrgHMu/',invest:5.35,imp:535,clicks:14,leads:4},
+  {date:'03/05',criativo:'AD01 · Segunda',        url:'https://www.instagram.com/p/DXzx0HRAFh6/',invest:1.26,imp:81, clicks:6, leads:2},
+  {date:'03/05',criativo:'AD02 · Empreendedora',   url:'https://www.instagram.com/p/DXzx0LWAHXw/',invest:0.50,imp:59, clicks:3, leads:1},
+  {date:'03/05',criativo:'AD03 · Próprio Caminho', url:'https://www.instagram.com/p/DXzx0LLAA-G/',invest:0.53,imp:54, clicks:0, leads:0},
+  {date:'03/05',criativo:'AD05 · Minha Mãe',       url:'https://www.instagram.com/p/DXzx0MrgHMu/',invest:3.91,imp:349,clicks:8, leads:5},
+  {date:'03/05',criativo:'AD06 · Trabalhar Remoto',url:'https://www.instagram.com/p/DXzx0GGgLyG/',invest:1.95,imp:158,clicks:5, leads:0},
+  {date:'04/05',criativo:'AD05 · Minha Mãe',       url:'https://www.instagram.com/p/DXzx0MrgHMu/',invest:5.82,imp:446,clicks:12,leads:3},
+];
+const EB_ORDER = ['AD01 · Segunda','AD02 · Empreendedora','AD03 · Próprio Caminho','AD04 · Pilates','AD05 · Minha Mãe','AD06 · Trabalhar Remoto'];
+const EB_URLS  = {'AD01 · Segunda':'https://www.instagram.com/p/DXzx0HRAFh6/','AD02 · Empreendedora':'https://www.instagram.com/p/DXzx0LWAHXw/','AD03 · Próprio Caminho':'https://www.instagram.com/p/DXzx0LLAA-G/','AD04 · Pilates':'https://www.instagram.com/p/DXzx0M6AEFu/','AD05 · Minha Mãe':'https://www.instagram.com/p/DXzx0MrgHMu/','AD06 · Trabalhar Remoto':'https://www.instagram.com/p/DXzx0GGgLyG/'};
+
+/* ═══════════════════════════════════════
+   RAW DATA — CAPTAÇÃO
+═══════════════════════════════════════ */
+const CAP_ROWS = [
+  {date:'04/05',criativo:'AD01 · Eu Sei',            pub:'Seguidores',   camp:'FB01_Q',url:'https://www.instagram.com/p/DXxOWx9AJlx/',invest:1.44,imp:134,clicks:3, leads:0},
+  {date:'04/05',criativo:'AD02 · CLT',               pub:'Env_30D',      camp:'FB02_Q',url:'https://www.instagram.com/p/DXxOWy0ABI_/',invest:3.64,imp:262,clicks:3, leads:0},
+  {date:'04/05',criativo:'AD03 · Boatos Verdadeiros',pub:'Seguidores_V2',camp:'FB01_Q',url:'https://www.instagram.com/p/DXxOXHOgAfq/',invest:5.65,imp:349,clicks:11,leads:0},
+  {date:'04/05',criativo:'AD04 · Uma Das Piores',    pub:'ADVGT',        camp:'FB03_F',url:'https://www.instagram.com/p/DXxOXYWgHPs/',invest:0.72,imp:29, clicks:3, leads:0},
+  {date:'04/05',criativo:'AD04 · Meus Alunos',       pub:'ADVGT_V2',     camp:'FB03_F',url:'https://www.instagram.com/p/DXxOXDUABoU/',invest:7.94,imp:265,clicks:10,leads:0},
+  {date:'04/05',criativo:'AD06 · Eu Demorei',        pub:'Env_30D_V2',   camp:'FB02_Q',url:'https://www.instagram.com/p/DXxOW23AB0U/',invest:3.87,imp:233,clicks:5, leads:0},
+  {date:'04/05',criativo:'AD08 · Abaixa Um Dedo',    pub:'ADVGT',        camp:'FB03_F',url:'https://www.instagram.com/p/DXxOXfSAMMZ/',invest:0.58,imp:28, clicks:0, leads:0},
+];
+
+/* ═══════════════════════════════════════
+   CHART INSTANCES
+═══════════════════════════════════════ */
+const ch = {};
+function mkChart(id, cfg){
+  if(ch[id]){ ch[id].destroy(); }
+  ch[id] = new Chart(R(id), cfg);
+}
+
+let currentNDays = null;
+const sortState = { eb:{col:null,dir:-1}, cap:{col:null,dir:-1} };
+
+function updSortUI(theadId, state){
+  document.querySelectorAll('#'+theadId+' .sortable').forEach(th=>{
+    const sp = th.querySelector('.sa');
+    if(!sp) return;
+    if(th.dataset.col === state.col){ sp.textContent = state.dir===-1?' ↓':' ↑'; sp.className='sa on'; }
+    else { sp.textContent=' ↕'; sp.className='sa'; }
+  });
+}
+function sortEb(col){
+  sortState.eb.dir = sortState.eb.col===col ? sortState.eb.dir*-1 : -1;
+  sortState.eb.col = col;
+  renderEbook(filterRows(EB_ROWS, currentNDays), currentNDays);
+}
+function sortCap(col){
+  sortState.cap.dir = sortState.cap.col===col ? sortState.cap.dir*-1 : -1;
+  sortState.cap.col = col;
+  renderCaptacao(filterRows(CAP_ROWS, currentNDays));
+}
+
+/* ═══════════════════════════════════════
+   GAUGES (init once, update data)
+═══════════════════════════════════════ */
+function initGauge(id, color){
+  ch[id] = new Chart(R(id),{
+    type:'doughnut',
+    data:{ datasets:[{ data:[0.5,99.5], backgroundColor:[color,'rgba(30,48,69,0.5)'], borderWidth:0, hoverOffset:0 }] },
+    options:{ rotation:270, circumference:180, cutout:'76%', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},tooltip:{enabled:false}}, animation:{duration:900,easing:'easeOutQuart'} }
+  });
+}
+initGauge('g-geral',  C.cyan);
+initGauge('g-ebook',  C.green);
+initGauge('g-captacao', C.purple);
+
+function updateGauge(id, pct){
+  const v = Math.max(0.5, Math.min(100, pct));
+  ch[id].data.datasets[0].data = [v, 100-v];
+  ch[id].update();
+}
+
+/* ═══════════════════════════════════════
+   AGGREGATION HELPERS
+═══════════════════════════════════════ */
+function sumRows(rows){ return rows.reduce((a,r)=>({invest:a.invest+r.invest,leads:a.leads+r.leads,clicks:a.clicks+r.clicks,imp:a.imp+r.imp}),{invest:0,leads:0,clicks:0,imp:0}); }
+
+function groupByDay(rows, dates){
+  const m={};
+  dates.forEach(d=>m[d]={invest:0,leads:0,clicks:0,imp:0});
+  rows.forEach(r=>{ if(m[r.date]){ m[r.date].invest+=r.invest; m[r.date].leads+=r.leads; m[r.date].clicks+=r.clicks; m[r.date].imp+=r.imp; } });
+  return m;
+}
+
+function groupByCriativo(rows, order){
+  const m={};
+  order.forEach(n=>m[n]={invest:0,leads:0,clicks:0,imp:0});
+  rows.forEach(r=>{ if(m[r.criativo]){ m[r.criativo].invest+=r.invest; m[r.criativo].leads+=r.leads; m[r.criativo].clicks+=r.clicks; m[r.criativo].imp+=r.imp; } });
+  return m;
+}
+
+function groupByPub(rows){
+  const m={};
+  rows.forEach(r=>{ if(!m[r.pub]) m[r.pub]={invest:0,clicks:0,imp:0}; m[r.pub].invest+=r.invest; m[r.pub].clicks+=r.clicks; m[r.pub].imp+=r.imp; });
+  return m;
+}
+
+/* ═══════════════════════════════════════
+   RENDER — GAUGES + SUMMARY
+═══════════════════════════════════════ */
+function renderGauges(ebRows, capRows, nDays){
+  const eb  = sumRows(ebRows);
+  const cap = sumRows(capRows);
+  const tot = {leads: eb.leads+cap.leads, invest: eb.invest+cap.invest};
+
+  const ebDays  = getFilteredDates(nDays).length;
+  const capDays = filterRows(CAP_ROWS, nDays).map(r=>r.date).filter((v,i,a)=>a.indexOf(v)===i).length || 1;
+
+  const pctG  = +(tot.leads/(META_EB_LEADS+META_CAP_LEADS)*100).toFixed(1);
+  const pctEB = +(eb.leads/META_EB_LEADS*100).toFixed(1);
+  const pctC  = +(cap.leads/META_CAP_LEADS*100).toFixed(1);
+
+  updateGauge('g-geral',    pctG);
+  updateGauge('g-ebook',    pctEB);
+  updateGauge('g-captacao', pctC);
+
+  set('gv-geral',   pctG+'%');
+  set('gv-ebook',   pctEB+'%');
+  set('gv-cap',     pctC+'%');
+  set('gs-atual-geral', tot.leads);
+  set('gs-media-geral', (eb.leads/ebDays).toFixed(1));
+  set('gs-atual-eb', eb.leads);
+  set('gs-media-eb', (eb.leads/ebDays).toFixed(1));
+  set('gs-atual-cap', cap.leads);
+  set('gs-media-cap', capDays > 0 ? (cap.leads/capDays).toFixed(1) : '0');
+
+  // Summary
+  set('sv-investido-total', fmtR(tot.invest));
+  set('sv-pct-orc', (tot.invest/(META_EB_ORC+META_CAP_ORC)*100).toFixed(2)+'%');
+  set('sv-leads-eb', eb.leads);
+  set('sv-invest-eb', fmtR(eb.invest));
+  const cplEB = eb.leads > 0 ? eb.invest/eb.leads : null;
+  set('sv-cpl-eb',  cplEB ? fmtR(cplEB) : '—');
+  set('sv-cpl-eb2', cplEB ? fmtR(cplEB) : '—');
+  set('sv-cpl-status-eb', cplEB ? (cplEB<=1.50 ? '✓ Abaixo da meta R$1,50' : '⚠ Acima da meta R$1,50') : '—');
+  set('sv-leads-cap', cap.leads || 'Em captação');
+  set('sv-invest-cap', fmtR(cap.invest));
+}
+
+/* ═══════════════════════════════════════
+   RENDER — EBOOK TAB
+═══════════════════════════════════════ */
+function renderEbook(rows, nDays){
+  const dates = getFilteredDates(nDays);
+  const tot   = sumRows(rows);
+  const byDay = groupByDay(rows, dates);
+  const byCr  = groupByCriativo(rows, EB_ORDER);
+  const nDaysLabel = nDays ? nDays+' dias' : dates.length+' dias';
+
+  // KPIs
+  set('eb-k-invest',   fmtR(tot.invest));
+  set('eb-k-invest-n', nDaysLabel);
+  set('eb-k-leads',    tot.leads);
+  set('eb-k-leads-n',  nDaysLabel);
+  set('eb-k-cpl',      tot.leads>0 ? fmtR(tot.invest/tot.leads) : '—');
+  set('eb-k-clicks',   tot.clicks);
+  set('eb-k-cpc',      tot.clicks>0 ? fmtR(tot.invest/tot.clicks) : '—');
+  set('eb-k-imp',      fmtN(tot.imp));
+  set('eb-k-ctr',      tot.imp>0 ? (tot.clicks/tot.imp*100).toFixed(2)+'%' : '—');
+
+  // Daily CPL (for line)
+  const dailyCPL = dates.map(d => byDay[d].leads>0 ? +(byDay[d].invest/byDay[d].leads).toFixed(2) : null);
+
+  // Stacked chart
+  mkChart('eb-stacked',{
+    type:'bar',
+    data:{ labels:dates, datasets:[
+      { type:'line', label:'CPL (R$)', data:dailyCPL, borderColor:C.orange, backgroundColor:'rgba(249,115,22,0.06)', pointBackgroundColor:C.orange, pointRadius:5, tension:0.4, fill:false, yAxisID:'yCPL', order:1, spanGaps:true },
+      { label:'Leads Ebook',    data:dates.map(d=>byDay[d].leads),  backgroundColor:C.green,  borderRadius:{topLeft:5,topRight:5}, stack:'s', yAxisID:'yL', order:2 },
+      { label:'Leads Captação', data:dates.map(()=>0),              backgroundColor:C.purple, borderRadius:{topLeft:5,topRight:5}, stack:'s', yAxisID:'yL', order:2 },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top',labels:{boxWidth:10,padding:14}}},
+      scales:{ x:{grid:{color:C.grid},stacked:true}, yL:{position:'left',grid:{color:C.grid},stacked:true,ticks:{stepSize:2}}, yCPL:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>'R$ '+v}} } }
+  });
+
+  // Donut
+  const crNames  = EB_ORDER.filter(n=>byCr[n].invest>0);
+  const crInvest = crNames.map(n=>byCr[n].invest);
+  mkChart('eb-donut',{
+    type:'doughnut',
+    data:{ labels:crNames.map(n=>n.split(' · ')[0]), datasets:[{ data:crInvest, backgroundColor:palette, borderColor:'#131f30', borderWidth:3, hoverOffset:8 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{ legend:{position:'bottom',labels:{boxWidth:10,padding:10}}, tooltip:{callbacks:{label:ctx=>` R$ ${ctx.parsed.toFixed(2)}`}} } }
+  });
+
+  // Leads bar
+  const crLeads = EB_ORDER.map(n=>byCr[n].leads);
+  mkChart('eb-leads-bar',{
+    type:'bar', data:{ labels:EB_ORDER.map(n=>n.split(' · ')[0]), datasets:[{ label:'Leads', data:crLeads, backgroundColor:palette, borderRadius:6 }] },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{grid:{color:C.grid}},y:{grid:{color:C.grid}}} }
+  });
+
+  // CPL bar
+  const crCPLs = EB_ORDER.map(n => byCr[n].leads>0 ? +(byCr[n].invest/byCr[n].leads).toFixed(2) : null);
+  mkChart('eb-cpl-bar',{
+    type:'bar', data:{ labels:EB_ORDER.map(n=>n.split(' · ')[0]), datasets:[{ label:'CPL (R$)', data:crCPLs, backgroundColor:crCPLs.map(v=>v===null?C.sub:v<=1.50?C.green:C.red), borderRadius:6 }] },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{ x:{grid:{color:C.grid},ticks:{callback:v=>'R$ '+v}}, y:{grid:{color:C.grid}} } }
+  });
+
+  // Table
+  let sortedOrder = [...EB_ORDER];
+  const {col:ec, dir:ed} = sortState.eb;
+  if(ec) sortedOrder.sort((a,b)=>{
+    const ca=byCr[a], cb=byCr[b];
+    let va,vb;
+    if(ec==='cpl'){ va=ca.leads>0?ca.invest/ca.leads:Infinity; vb=cb.leads>0?cb.invest/cb.leads:Infinity; }
+    else if(ec==='ctr'){ va=ca.imp>0?ca.clicks/ca.imp:0; vb=cb.imp>0?cb.clicks/cb.imp:0; }
+    else { va=ca[ec]||0; vb=cb[ec]||0; }
+    return (va-vb)*ed;
+  });
+  updSortUI('eb-thead', sortState.eb);
+  const tbody = R('eb-tbody'); tbody.innerHTML='';
+  sortedOrder.forEach((nome,i) => {
+    const c = byCr[nome];
+    const cpl = c.leads>0 ? fmtR(c.invest/c.leads) : '—';
+    const ctr = c.imp>0 ? (c.clicks/c.imp*100).toFixed(2)+'%' : '—';
+    const cplN = c.leads>0 ? c.invest/c.leads : null;
+    const badge = cplN===null
+      ? `<span class="pill pill-b">Aguardando</span>`
+      : cplN<=1.50
+        ? `<span class="pill pill-g">Abaixo da meta</span>`
+        : `<span class="pill pill-r">Acima da meta</span>`;
+    tbody.innerHTML += `<tr>
+      <td class="td-criativo">${nome}</td>
+      <td class="td-r">${fmtR(c.invest)}</td>
+      <td class="td-r">${fmtN(c.imp)}</td>
+      <td class="td-r">${c.clicks}</td>
+      <td class="td-r">${ctr}</td>
+      <td class="td-r">${c.leads||'—'}</td>
+      <td class="td-r">${cpl}</td>
+      <td>${badge}</td>
+      <td><a href="${EB_URLS[nome]}" target="_blank" class="ig-btn">${igIcon} Ver Ad</a></td>
+    </tr>`;
+  });
+}
+
+/* ═══════════════════════════════════════
+   RENDER — CAPTAÇÃO TAB
+═══════════════════════════════════════ */
+function renderCaptacao(rows){
+  const tot   = sumRows(rows);
+  const order = rows.map(r=>r.criativo);
+
+  // KPIs
+  set('cap-k-invest', fmtR(tot.invest));
+  set('cap-k-clicks', tot.clicks);
+  set('cap-k-cpc',    tot.clicks>0 ? fmtR(tot.invest/tot.clicks) : '—');
+  set('cap-k-imp',    fmtN(tot.imp));
+  set('cap-k-ctr',    tot.imp>0 ? (tot.clicks/tot.imp*100).toFixed(2)+'%' : '—');
+
+  const names   = rows.map(r=>r.criativo.split(' · ')[0]);
+  const invests = rows.map(r=>r.invest);
+  const clicks  = rows.map(r=>r.clicks);
+  const ctrs    = rows.map(r=>r.imp>0 ? +((r.clicks/r.imp)*100).toFixed(2) : 0);
+
+  mkChart('cap-invest-bar',{
+    type:'bar', data:{ labels:names, datasets:[{ label:'R$ Investido', data:invests, backgroundColor:palette, borderRadius:6 }] },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{grid:{color:C.grid},ticks:{callback:v=>'R$ '+v}},y:{grid:{color:C.grid}}} }
+  });
+  mkChart('cap-clicks-bar',{
+    type:'bar', data:{ labels:names, datasets:[{ label:'Cliques', data:clicks, backgroundColor:palette, borderRadius:6 }] },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{grid:{color:C.grid}},y:{grid:{color:C.grid}}} }
+  });
+  mkChart('cap-ctr-bar',{
+    type:'bar', data:{ labels:names, datasets:[{ label:'CTR (%)', data:ctrs, backgroundColor:ctrs.map(v=>v>4?C.green:v>2?C.cyan:C.yellow), borderRadius:6 }] },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{grid:{color:C.grid},ticks:{callback:v=>v+'%'}},y:{grid:{color:C.grid}}} }
+  });
+
+  const pubMap = groupByPub(rows);
+  const pubKeys = Object.keys(pubMap);
+  mkChart('cap-pub-invest',{
+    type:'doughnut', data:{ labels:pubKeys, datasets:[{ data:pubKeys.map(k=>+pubMap[k].invest.toFixed(2)), backgroundColor:palette, borderColor:'#131f30', borderWidth:3, hoverOffset:6 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'58%', plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:8}},tooltip:{callbacks:{label:ctx=>` R$ ${ctx.parsed.toFixed(2)}`}}} }
+  });
+  mkChart('cap-pub-clicks',{
+    type:'bar', data:{ labels:pubKeys, datasets:[{ label:'Cliques', data:pubKeys.map(k=>pubMap[k].clicks), backgroundColor:palette, borderRadius:6 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{color:C.grid}},y:{grid:{color:C.grid}}} }
+  });
+
+  let sortedRows = [...rows];
+  const {col:cc, dir:cd} = sortState.cap;
+  if(cc) sortedRows.sort((a,b)=>{
+    const va = cc==='ctr' ? (a.imp>0?a.clicks/a.imp:0) : a[cc]||0;
+    const vb = cc==='ctr' ? (b.imp>0?b.clicks/b.imp:0) : b[cc]||0;
+    return (va-vb)*cd;
+  });
+  updSortUI('cap-thead', sortState.cap);
+  const tbody = R('cap-tbody'); tbody.innerHTML='';
+  sortedRows.forEach(r => {
+    const ctr = r.imp>0 ? (r.clicks/r.imp*100).toFixed(2)+'%' : '—';
+    tbody.innerHTML += `<tr>
+      <td class="td-criativo">${r.criativo}</td>
+      <td class="td-pub">${r.pub}</td>
+      <td style="font-size:11px;color:var(--sub)">${r.camp}</td>
+      <td class="td-r">${fmtR(r.invest)}</td>
+      <td class="td-r">${fmtN(r.imp)}</td>
+      <td class="td-r">${r.clicks||'—'}</td>
+      <td class="td-r">${ctr}</td>
+      <td><span class="pill pill-b">Em captação</span></td>
+      <td><a href="${r.url}" target="_blank" class="ig-btn">${igIcon} Ver Ad</a></td>
+    </tr>`;
+  });
+}
+
+/* ═══════════════════════════════════════
+   APPLY FILTER — main entry point
+═══════════════════════════════════════ */
+function applyFilter(nDays, btn){
+  currentNDays = nDays;
+  document.querySelectorAll('.f-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const ebRows  = filterRows(EB_ROWS,  nDays);
+  const capRows = filterRows(CAP_ROWS, nDays);
+  renderGauges(ebRows, capRows, nDays);
+  renderEbook(ebRows, nDays);
+  renderCaptacao(capRows);
+}
+
+/* ═══════════════════════════════════════
+   TABS
+═══════════════════════════════════════ */
+function switchTab(name, btn){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  R('panel-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ═══════════════════════════════════════
+   META VARIABLES (updated from Sheets)
+═══════════════════════════════════════ */
+let META_EB_LEADS  = 550;
+let META_CAP_LEADS = 750;
+let META_EB_ORC    = 366;
+let META_CAP_ORC   = 375;
+
+/* ═══════════════════════════════════════
+   AUTO-FETCH FROM GOOGLE SHEETS
+═══════════════════════════════════════ */
+const SHEET_ID = '1MNmYN39x8FB8BGBQocZGAL8kDGQ4WZ5B7uAy5KazJ1c';
+const GVT      = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+
+function csvLine(line){
+  const res=[]; let cur='', inQ=false;
+  for(const ch of line){
+    if(ch==='"'){ inQ=!inQ; }
+    else if(ch===','&&!inQ){ res.push(cur.trim()); cur=''; }
+    else cur+=ch;
+  }
+  res.push(cur.trim());
+  return res;
+}
+function parseCSV(txt){
+  const lines = txt.trim().split('\n');
+  const heads = csvLine(lines[0]).map(h=>h.replace(/"/g,'').trim());
+  return lines.slice(1).filter(l=>l.trim()).map(l=>{
+    const vals = csvLine(l).map(v=>v.replace(/^"|"$/g,'').trim());
+    return heads.reduce((o,h,i)=>{ o[h]=vals[i]||''; return o; },{});
+  });
+}
+function parseMoney(s){ return parseFloat((s||'').replace('R$ ','').replace(',','.'))||0; }
+function shortDate(d){ const p=d.split('/'); return p.length>=2 ? p[0]+'/'+p[1] : d; }
+
+const CRIATIVO_MAP = {
+  'AD01_IMG_Segunda':'AD01 · Segunda','AD02_IMG_Empreendedora':'AD02 · Empreendedora',
+  'AD03_IMG_Proprio_Caminho':'AD03 · Próprio Caminho','AD04_IMG_Pilates':'AD04 · Pilates',
+  'AD05_IMG_Minha_Mae':'AD05 · Minha Mãe','AD06_IMG_Trabalhar_Remoto':'AD06 · Trabalhar Remoto',
+  'AD01_IMG_Eu_Sei':'AD01 · Eu Sei','AD02_IMG_CLT':'AD02 · CLT',
+  'AD03_IMG_Boatos_Verdadeiros':'AD03 · Boatos Verdadeiros','AD04_VID_Uma_Das_Piores':'AD04 · Uma Das Piores',
+  'AD04_IMG_Meus_Alunos':'AD04 · Meus Alunos','AD06_IMG_Eu_Demorei':'AD06 · Eu Demorei',
+  'AD08_VID_Abaixa_Um_Dedo':'AD08 · Abaixa Um Dedo',
+};
+function mapCriativo(code){
+  return CRIATIVO_MAP[code] || code.replace(/_IMG_|_VID_/,' · ').replace(/_/g,' ');
+}
+function extractCamp(s){
+  const m = s.match(/(FB\d+)_.*_([A-Z])$/);
+  return m ? m[1]+'_'+m[2] : s;
+}
+
+async function loadFromSheets(){
+  const hSub = document.querySelector('.h-sub');
+  hSub.textContent = '⏳ Buscando dados da planilha…';
+  try {
+    const [ebTxt, capTxt, metasTxt] = await Promise.all([
+      fetch(GVT+'&gid=734559877').then(r=>r.text()),
+      fetch(GVT+'&gid=280005977').then(r=>r.text()),
+      fetch(GVT+'&gid=1765140443').then(r=>r.text()),
+    ]);
+
+    /* — Ebook — */
+    const ebData = parseCSV(ebTxt);
+    EB_ROWS.length = 0;
+    ebData.forEach(r=>{
+      const nome = mapCriativo(r.Criativo);
+      if(r.URL) EB_URLS[nome] = r.URL;
+      EB_ROWS.push({ date:shortDate(r.Date), criativo:nome, url:r.URL||'',
+        invest:parseMoney(r.Investido), imp:parseInt(r.Impressoes)||0,
+        clicks:parseInt(r.Cliques)||0, leads:parseInt(r.Leads)||0 });
+    });
+    // Rebuild ALL_DATES from fetched data
+    const dSet = new Set(EB_ROWS.map(r=>r.date));
+    ALL_DATES.length = 0;
+    [...dSet].sort((a,b)=>parseDate(a)-parseDate(b)).forEach(d=>ALL_DATES.push(d));
+    // Rebuild EB_ORDER preserving known order, appending new
+    const crSet = new Set(EB_ROWS.map(r=>r.criativo));
+    const newOrder = EB_ORDER.filter(n=>crSet.has(n));
+    crSet.forEach(n=>{ if(!newOrder.includes(n)) newOrder.push(n); });
+    EB_ORDER.length = 0; newOrder.forEach(n=>EB_ORDER.push(n));
+
+    /* — Captação — */
+    const capData = parseCSV(capTxt);
+    CAP_ROWS.length = 0;
+    capData.forEach(r=>{
+      CAP_ROWS.push({ date:shortDate(r.Date), criativo:mapCriativo(r.Criativo),
+        pub:r.Publico||'', camp:extractCamp(r.Campanha||''),
+        url:r.URL||'', invest:parseMoney(r.Investido),
+        imp:parseInt(r.Impressoes)||0, clicks:parseInt(r.Cliques)||0, leads:parseInt(r.Leads)||0 });
+    });
+
+    /* — Metas — */
+    parseCSV(metasTxt).forEach(r=>{
+      const key = Object.values(r)[0];
+      const leads = parseInt(Object.values(r)[1])||0;
+      const orc   = parseMoney(Object.values(r)[2]);
+      if(key==='Ebook'){    META_EB_LEADS=leads;  META_EB_ORC=orc;  }
+      if(key==='Captação'){ META_CAP_LEADS=leads; META_CAP_ORC=orc; }
+    });
+
+    const latest = ALL_DATES[ALL_DATES.length-1]||'—';
+    const hora   = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    hSub.textContent = `Período: ${ALL_DATES[0]} – ${latest} · Atualizado ${hora}`;
+
+  } catch(e){
+    console.warn('Sheets fetch error:', e);
+    hSub.textContent = 'Período: 29/04 – 04/05/2026 · Dados locais (sem conexão com a planilha)';
+  }
+  applyFilter(null, document.querySelector('.f-btn.active'));
+}
+
+/* ═══════════════════════════════════════
+   INIT
+═══════════════════════════════════════ */
+loadFromSheets();
+</script>
+</body>
+</html>
