@@ -33,6 +33,10 @@
     .f-btn{padding:5px 16px;font-size:12px;font-weight:600;background:var(--card);border:1px solid var(--border);border-radius:20px;color:var(--sub);cursor:pointer;transition:all .2s;}
     .f-btn:hover{color:var(--text);border-color:var(--sub2);}
     .f-btn.active{background:rgba(0,198,255,0.12);border-color:var(--cyan);color:var(--cyan);}
+    .filter-sep{width:1px;height:20px;background:var(--border);margin:0 8px;flex-shrink:0;}
+    .date-inp{color-scheme:dark;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;transition:border-color .2s;}
+    .date-inp:focus{outline:none;border-color:var(--cyan);}
+    .date-inp::-webkit-calendar-picker-indicator{filter:invert(0.7);cursor:pointer;}
 
     /* Gauge section */
     .gauge-section{background:#0c1828;border-bottom:1px solid var(--border);padding:22px 36px 18px;}
@@ -171,6 +175,11 @@
       <button class="f-btn" onclick="applyFilter(7,this)">7 Dias</button>
       <button class="f-btn" onclick="applyFilter(14,this)">14 Dias</button>
     </div>
+    <div class="filter-sep"></div>
+    <input type="date" id="date-start" class="date-inp" />
+    <span style="color:var(--sub);font-size:12px;margin:0 2px;">→</span>
+    <input type="date" id="date-end" class="date-inp" />
+    <button id="apply-custom" class="f-btn" onclick="applyCustomRange()">Aplicar</button>
   </div>
 </div>
 
@@ -421,6 +430,7 @@ const ALL_DATES = ['29/04','30/04','01/05','02/05','03/05','04/05'];
 let   LATEST    = parseDate('04/05');
 
 function getFilteredDates(nDays){
+  if(customFilterDates) return customFilterDates;
   if(!nDays) return ALL_DATES;
   const cutoff = new Date(LATEST); cutoff.setDate(cutoff.getDate()-(nDays-1));
   return ALL_DATES.filter(d => parseDate(d) >= cutoff);
@@ -482,6 +492,10 @@ function mkChart(id, cfg){
 }
 
 let currentNDays = null;
+let customFilterDates = null;
+
+function toInputDate(s){ const [d,m]=s.split('/'); return `2026-${m.padStart(2,'0')}-${d.padStart(2,'0')}`; }
+function fromInputDate(s){ if(!s) return null; const [,m,d]=s.split('-'); return `${d}/${m}`; }
 const sortState = { eb:{col:null,dir:-1}, cap:{col:null,dir:-1} };
 
 function updSortUI(theadId, state){
@@ -807,7 +821,25 @@ function renderQuality(rows, prefix, nDays){
 /* ═══════════════════════════════════════
    APPLY FILTER — main entry point
 ═══════════════════════════════════════ */
+function applyCustomRange(){
+  const s = document.getElementById('date-start').value;
+  const e = document.getElementById('date-end').value;
+  if(!s || !e) return;
+  const startDt = new Date(s), endDt = new Date(e);
+  if(startDt > endDt) return;
+  document.querySelectorAll('.f-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('apply-custom').classList.add('active');
+  customFilterDates = ALL_DATES.filter(d=>{ const dt=parseDate(d); return dt>=startDt && dt<=endDt; });
+  currentNDays = null;
+  const ebRows  = EB_ROWS.filter(r =>{ const dt=parseDate(r.date); return dt>=startDt && dt<=endDt; });
+  const capRows = CAP_ROWS.filter(r=>{ const dt=parseDate(r.date); return dt>=startDt && dt<=endDt; });
+  renderGauges(ebRows, capRows, null);
+  renderEbook(ebRows, null);
+  renderCaptacao(capRows);
+}
+
 function applyFilter(nDays, btn){
+  customFilterDates = null;
   currentNDays = nDays;
   document.querySelectorAll('.f-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
@@ -949,6 +981,11 @@ async function loadFromSheets(){
     const latest = ALL_DATES[ALL_DATES.length-1]||'—';
     const hora   = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     hSub.textContent = `Período: ${ALL_DATES[0]} – ${latest} · Atualizado ${hora}`;
+    // Preencher inputs de data com o range disponível
+    const dsEl = document.getElementById('date-start');
+    const deEl = document.getElementById('date-end');
+    if(dsEl && ALL_DATES[0]) dsEl.value = toInputDate(ALL_DATES[0]);
+    if(deEl && latest !== '—') deEl.value = toInputDate(latest);
 
   } catch(e){
     console.error('Sheets fetch error:', e);
