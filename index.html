@@ -272,10 +272,10 @@
         <p class="sum-sub">Investido: <span id="sv-invest-cap">—</span></p>
       </div>
       <div class="sum-card">
-        <p class="sum-lbl">Meta CPL Captação</p>
-        <p class="sum-meta">Referência de eficiência</p>
-        <p class="sum-val yellow">R$ 2,00</p>
-        <p class="sum-sub">Aguardando primeiros leads</p>
+        <p class="sum-lbl">CPL Captação</p>
+        <p class="sum-meta">Real vs Meta R$2,00</p>
+        <p class="sum-val" id="sv-cpl-cap">—</p>
+        <p class="sum-sub" id="sv-cpl-status-cap">Aguardando leads</p>
       </div>
     </div>
   </div>
@@ -599,6 +599,14 @@ function renderGauges(ebRows, capRows, nDays){
   set('sv-cpl-status-eb', cplEB ? (cplEB<=1.50 ? '✓ Abaixo da meta R$1,50' : '⚠ Acima da meta R$1,50') : '—');
   set('sv-leads-cap', cap.leads || 'Em captação');
   set('sv-invest-cap', fmtR(cap.invest));
+  const cplCap = cap.leads > 0 ? cap.invest/cap.leads : null;
+  const cplCapEl = document.getElementById('sv-cpl-cap');
+  if(cplCap){
+    if(cplCapEl){ cplCapEl.textContent = fmtR(cplCap); cplCapEl.style.color = cplCap<=2 ? 'var(--green)' : 'var(--red)'; }
+    set('sv-cpl-status-cap', cplCap<=2 ? '✓ Abaixo da meta R$2,00' : '⚠ Acima da meta R$2,00');
+  } else {
+    if(cplCapEl){ cplCapEl.textContent = '—'; cplCapEl.style.color = 'var(--sub)'; }
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -922,9 +930,13 @@ async function loadFromSheets(){
 
     /* — Leads (Orgânico) — */
     const leadsRows = parseCSV(leadsTxt).map(r=>Object.values(r));
+    // Tenta por texto (case-insensitive, sem depender de acento)
     leadsRows.forEach(row => {
-      if((row[0]||'').toString().trim() === 'Orgânico') ORG_LEADS = parseInt(row[1])||0;
+      const k = (row[0]||'').toString().toLowerCase().replace(/[^a-z]/g,'');
+      if(k.startsWith('org')) ORG_LEADS = parseInt(row[1])||0;
     });
+    // Fallback: segunda linha = Orgânico (posição fixa na aba Leads)
+    if(ORG_LEADS === 0 && leadsRows[0]) ORG_LEADS = parseInt(leadsRows[0][1])||0;
 
     /* — Metas — */
     parseCSV(metasTxt).forEach(r=>{
