@@ -37,7 +37,11 @@
     /* Gauge section */
     .gauge-section{background:#0c1828;border-bottom:1px solid var(--border);padding:22px 36px 18px;}
     .gauge-outer{max-width:1400px;margin:0 auto;}
-    .gauge-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:14px;}
+    .gauge-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px;}
+    .gc-orange{border-top:2px solid var(--orange);}
+    .mini-kpi{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+    .mini-kpi-lbl{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;}
+    .mini-kpi-val{font-size:19px;font-weight:800;}
     .gauge-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px 14px;text-align:center;position:relative;}
     .gc-cyan{border-top:2px solid var(--cyan);}
     .gc-green{border-top:2px solid var(--green);}
@@ -184,10 +188,10 @@
             <div class="gauge-pct-lbl">atingido</div>
           </div>
         </div>
-        <div class="gauge-range"><span>0</span><span id="gr-geral">Meta: 1.300</span></div>
+        <div class="gauge-range"><span>0</span><span id="gr-geral">Meta: 2.300</span></div>
         <div class="gauge-stats">
           <div><span>Atual</span><strong id="gs-atual-geral">—</strong></div>
-          <div><span>Meta</span><strong>1.300</strong></div>
+          <div><span>Meta</span><strong>2.300</strong></div>
           <div><span>Média/dia</span><strong id="gs-media-geral">—</strong></div>
         </div>
       </div>
@@ -221,6 +225,22 @@
           <div><span>Atual</span><strong id="gs-atual-cap">—</strong></div>
           <div><span>Meta</span><strong>750</strong></div>
           <div><span>Média/dia</span><strong id="gs-media-cap">—</strong></div>
+        </div>
+      </div>
+
+      <div class="gauge-card gc-orange">
+        <p class="gauge-ttl">Orgânico</p>
+        <div class="gauge-canvas-wrap"><canvas id="g-organico"></canvas>
+          <div class="gauge-overlay">
+            <div class="gauge-pct" style="color:var(--orange)" id="gv-org">—</div>
+            <div class="gauge-pct-lbl">atingido</div>
+          </div>
+        </div>
+        <div class="gauge-range"><span>0</span><span>Meta: 1.000</span></div>
+        <div class="gauge-stats">
+          <div><span>Atual</span><strong id="gs-atual-org">—</strong></div>
+          <div><span>Meta</span><strong>1.000</strong></div>
+          <div><span>Média/dia</span><strong id="gs-media-org">—</strong></div>
         </div>
       </div>
 
@@ -287,19 +307,23 @@
         <div class="chart-wrap h260"><canvas id="eb-donut"></canvas></div>
       </div>
     </div>
-    <p class="sec">Análise por Criativo</p>
-    <div class="row2b">
+    <p class="sec">Métricas de Qualidade</p>
+    <div class="row2">
       <div class="chart-card">
-        <p class="chart-ttl">Leads por Criativo</p>
-        <p class="chart-sub">Total no período selecionado</p>
-        <div class="chart-wrap h200"><canvas id="eb-leads-bar"></canvas></div>
+        <p class="chart-ttl">CPM · CTR por Dia</p>
+        <p class="chart-sub">Evolução diária das métricas de qualidade</p>
+        <div class="chart-wrap h240"><canvas id="eb-quality"></canvas></div>
       </div>
       <div class="chart-card">
-        <p class="chart-ttl">CPL por Criativo</p>
-        <p class="chart-sub">Verde ≤ R$1,50 (meta) · Vermelho acima</p>
-        <div class="chart-wrap h200"><canvas id="eb-cpl-bar"></canvas></div>
+        <p class="chart-ttl">Resumo do Período</p>
+        <p class="chart-sub">Médias calculadas sobre o período filtrado</p>
+        <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:4px;">
+          <div class="mini-kpi"><p class="mini-kpi-lbl">CPM</p><p class="mini-kpi-val" style="color:var(--orange)" id="eb-q-cpm">—</p></div>
+          <div class="mini-kpi"><p class="mini-kpi-lbl">CTR Médio</p><p class="mini-kpi-val" style="color:var(--cyan)" id="eb-q-ctr">—</p></div>
+        </div>
       </div>
     </div>
+
     <p class="sec">Detalhamento por Criativo</p>
     <div class="tbl-card">
       <table>
@@ -342,6 +366,23 @@
       <div class="chart-card"><p class="chart-ttl">Investimento por Público</p><p class="chart-sub">Alocação por segmentação</p><div class="chart-wrap h200"><canvas id="cap-pub-invest"></canvas></div></div>
       <div class="chart-card"><p class="chart-ttl">Cliques por Público</p><p class="chart-sub">Performance por segmentação</p><div class="chart-wrap h200"><canvas id="cap-pub-clicks"></canvas></div></div>
     </div>
+    <p class="sec">Métricas de Qualidade</p>
+    <div class="row2">
+      <div class="chart-card">
+        <p class="chart-ttl">CPM · CTR por Dia</p>
+        <p class="chart-sub">Evolução diária das métricas de qualidade</p>
+        <div class="chart-wrap h240"><canvas id="cap-quality"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <p class="chart-ttl">Resumo do Período</p>
+        <p class="chart-sub">Médias calculadas sobre o período filtrado</p>
+        <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:4px;">
+          <div class="mini-kpi"><p class="mini-kpi-lbl">CPM</p><p class="mini-kpi-val" style="color:var(--orange)" id="cap-q-cpm">—</p></div>
+          <div class="mini-kpi"><p class="mini-kpi-lbl">CTR Médio</p><p class="mini-kpi-val" style="color:var(--cyan)" id="cap-q-ctr">—</p></div>
+        </div>
+      </div>
+    </div>
+
     <p class="sec">Detalhamento por Criativo</p>
     <div class="tbl-card">
       <table>
@@ -381,7 +422,7 @@ function fmtN(v){ return v.toLocaleString('pt-BR'); }
 function parseDate(s){ const [d,m]=s.split('/').map(Number); return new Date(2026,m-1,d); }
 
 const ALL_DATES = ['29/04','30/04','01/05','02/05','03/05','04/05'];
-const LATEST    = parseDate('04/05');
+let   LATEST    = parseDate('04/05');
 
 function getFilteredDates(nDays){
   if(!nDays) return ALL_DATES;
@@ -476,9 +517,10 @@ function initGauge(id, color){
     options:{ rotation:270, circumference:180, cutout:'76%', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},tooltip:{enabled:false}}, animation:{duration:900,easing:'easeOutQuart'} }
   });
 }
-initGauge('g-geral',  C.cyan);
-initGauge('g-ebook',  C.green);
+initGauge('g-geral',    C.cyan);
+initGauge('g-ebook',    C.green);
 initGauge('g-captacao', C.purple);
+initGauge('g-organico', C.orange);
 
 function updateGauge(id, pct){
   const v = Math.max(0.5, Math.min(100, pct));
@@ -522,7 +564,7 @@ function renderGauges(ebRows, capRows, nDays){
   const ebDays  = getFilteredDates(nDays).length;
   const capDays = filterRows(CAP_ROWS, nDays).map(r=>r.date).filter((v,i,a)=>a.indexOf(v)===i).length || 1;
 
-  const pctG  = +(tot.leads/(META_EB_LEADS+META_CAP_LEADS)*100).toFixed(1);
+  const pctG  = +((tot.leads+ORG_LEADS)/(META_EB_LEADS+META_CAP_LEADS+META_ORG_LEADS)*100).toFixed(1);
   const pctEB = +(eb.leads/META_EB_LEADS*100).toFixed(1);
   const pctC  = +(cap.leads/META_CAP_LEADS*100).toFixed(1);
 
@@ -533,12 +575,18 @@ function renderGauges(ebRows, capRows, nDays){
   set('gv-geral',   pctG+'%');
   set('gv-ebook',   pctEB+'%');
   set('gv-cap',     pctC+'%');
-  set('gs-atual-geral', tot.leads);
-  set('gs-media-geral', (eb.leads/ebDays).toFixed(1));
+  set('gs-atual-geral', tot.leads + ORG_LEADS);
+  set('gs-media-geral', ((tot.leads+ORG_LEADS)/Math.max(1,ebDays)).toFixed(1));
   set('gs-atual-eb', eb.leads);
   set('gs-media-eb', (eb.leads/ebDays).toFixed(1));
   set('gs-atual-cap', cap.leads);
   set('gs-media-cap', capDays > 0 ? (cap.leads/capDays).toFixed(1) : '0');
+  // Orgânico
+  const pctOrg = +(ORG_LEADS/META_ORG_LEADS*100).toFixed(1);
+  updateGauge('g-organico', Math.max(0.5, pctOrg));
+  set('gv-org', pctOrg.toFixed(1).replace('.',',')+' %');
+  set('gs-atual-org', ORG_LEADS);
+  set('gs-media-org', (ORG_LEADS/Math.max(1,ebDays)).toFixed(1));
 
   // Summary
   set('sv-investido-total', fmtR(tot.invest));
@@ -577,16 +625,23 @@ function renderEbook(rows, nDays){
   // Daily CPL (for line)
   const dailyCPL = dates.map(d => byDay[d].leads>0 ? +(byDay[d].invest/byDay[d].leads).toFixed(2) : null);
 
+  // CTR diário
+  const dailyCTR = dates.map(d => byDay[d].imp>0 ? +((byDay[d].clicks/byDay[d].imp)*100).toFixed(2) : null);
+
   // Stacked chart
   mkChart('eb-stacked',{
     type:'bar',
     data:{ labels:dates, datasets:[
-      { type:'line', label:'CPL (R$)', data:dailyCPL, borderColor:C.orange, backgroundColor:'rgba(249,115,22,0.06)', pointBackgroundColor:C.orange, pointRadius:5, tension:0.4, fill:false, yAxisID:'yCPL', order:1, spanGaps:true },
-      { label:'Leads Ebook',    data:dates.map(d=>byDay[d].leads),  backgroundColor:C.green,  borderRadius:{topLeft:5,topRight:5}, stack:'s', yAxisID:'yL', order:2 },
-      { label:'Leads Captação', data:dates.map(()=>0),              backgroundColor:C.purple, borderRadius:{topLeft:5,topRight:5}, stack:'s', yAxisID:'yL', order:2 },
+      { type:'line', label:'CPL (R$)', data:dailyCPL, borderColor:C.orange, backgroundColor:'rgba(249,115,22,0.06)', pointBackgroundColor:C.orange, pointRadius:4, tension:0.4, fill:false, yAxisID:'yCPL', order:1, spanGaps:true },
+      { label:'Leads Ebook', data:dates.map(d=>byDay[d].leads), backgroundColor:C.green, borderRadius:{topLeft:5,topRight:5}, stack:'s', yAxisID:'yL', order:2 },
     ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top',labels:{boxWidth:10,padding:14}}},
-      scales:{ x:{grid:{color:C.grid},stacked:true}, yL:{position:'left',grid:{color:C.grid},stacked:true,ticks:{stepSize:2}}, yCPL:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>'R$ '+v}} } }
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top',labels:{boxWidth:10,padding:12}}},
+      scales:{
+        x:{ grid:{color:C.grid}, stacked:true },
+        yL:  { position:'left',  grid:{color:C.grid}, stacked:true, ticks:{stepSize:2} },
+        yCPL:{ position:'right', grid:{drawOnChartArea:false}, ticks:{callback:v=>'R$ '+v,color:C.orange} },
+      }
+    }
   });
 
   // Donut
@@ -598,19 +653,8 @@ function renderEbook(rows, nDays){
     options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{ legend:{position:'bottom',labels:{boxWidth:10,padding:10}}, tooltip:{callbacks:{label:ctx=>` R$ ${ctx.parsed.toFixed(2)}`}} } }
   });
 
-  // Leads bar
-  const crLeads = EB_ORDER.map(n=>byCr[n].leads);
-  mkChart('eb-leads-bar',{
-    type:'bar', data:{ labels:EB_ORDER.map(n=>n.split(' · ')[0]), datasets:[{ label:'Leads', data:crLeads, backgroundColor:palette, borderRadius:6 }] },
-    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{grid:{color:C.grid}},y:{grid:{color:C.grid}}} }
-  });
-
-  // CPL bar
-  const crCPLs = EB_ORDER.map(n => byCr[n].leads>0 ? +(byCr[n].invest/byCr[n].leads).toFixed(2) : null);
-  mkChart('eb-cpl-bar',{
-    type:'bar', data:{ labels:EB_ORDER.map(n=>n.split(' · ')[0]), datasets:[{ label:'CPL (R$)', data:crCPLs, backgroundColor:crCPLs.map(v=>v===null?C.sub:v<=1.50?C.green:C.red), borderRadius:6 }] },
-    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{ x:{grid:{color:C.grid},ticks:{callback:v=>'R$ '+v}}, y:{grid:{color:C.grid}} } }
-  });
+  // Quality chart
+  renderQuality(rows, 'eb', nDays);
 
   // Table
   let sortedOrder = [...EB_ORDER];
@@ -662,6 +706,9 @@ function renderCaptacao(rows){
   set('cap-k-cpc',    tot.clicks>0 ? fmtR(tot.invest/tot.clicks) : '—');
   set('cap-k-imp',    fmtN(tot.imp));
   set('cap-k-ctr',    tot.imp>0 ? (tot.clicks/tot.imp*100).toFixed(2)+'%' : '—');
+
+  // Quality chart
+  renderQuality(rows, 'cap', null);
 
   const names   = rows.map(r=>r.criativo.split(' · ')[0]);
   const invests = rows.map(r=>r.invest);
@@ -718,6 +765,41 @@ function renderCaptacao(rows){
 }
 
 /* ═══════════════════════════════════════
+   RENDER — QUALITY CHART
+═══════════════════════════════════════ */
+function renderQuality(rows, prefix, nDays){
+  const dates  = getFilteredDates(nDays);
+  const byDay  = groupByDay(rows, dates);
+  const tot    = sumRows(rows);
+
+  // KPIs
+  const cpm = tot.imp>0 ? (tot.invest/tot.imp*1000) : 0;
+  const ctr = tot.imp>0 ? (tot.clicks/tot.imp*100)  : 0;
+  set(prefix+'-q-cpm', 'R$ '+cpm.toFixed(2).replace('.',','));
+  set(prefix+'-q-ctr', ctr.toFixed(2).replace('.',',')+'%');
+
+  // Daily series
+  const dCPM = dates.map(d => byDay[d].imp>0 ? +(byDay[d].invest/byDay[d].imp*1000).toFixed(2) : null);
+  const dCTR = dates.map(d => byDay[d].imp>0 ? +(byDay[d].clicks/byDay[d].imp*100).toFixed(2)  : null);
+
+  mkChart(prefix+'-quality',{
+    type:'line',
+    data:{ labels:dates, datasets:[
+      { label:'CPM (R$)', data:dCPM, borderColor:C.orange, backgroundColor:'rgba(249,115,22,0.05)', pointRadius:4, tension:0.4, fill:false, yAxisID:'yA', spanGaps:true },
+      { label:'CTR (%)',  data:dCTR, borderColor:C.cyan,   backgroundColor:'rgba(0,198,255,0.05)',  pointRadius:4, tension:0.4, fill:false, yAxisID:'yB', spanGaps:true },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'top',labels:{boxWidth:10,padding:12}} },
+      scales:{
+        x:{ grid:{color:C.grid} },
+        yA:{ position:'left',  grid:{color:C.grid}, ticks:{callback:v=>'R$ '+v,color:C.orange} },
+        yB:{ position:'right', grid:{drawOnChartArea:false}, ticks:{callback:v=>parseFloat(v.toFixed(2))+'%',color:C.cyan} },
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════
    APPLY FILTER — main entry point
 ═══════════════════════════════════════ */
 function applyFilter(nDays, btn){
@@ -746,8 +828,10 @@ function switchTab(name, btn){
 ═══════════════════════════════════════ */
 let META_EB_LEADS  = 550;
 let META_CAP_LEADS = 750;
+let META_ORG_LEADS = 1000;
 let META_EB_ORC    = 366;
 let META_CAP_ORC   = 375;
+let ORG_LEADS      = 0;
 
 /* ═══════════════════════════════════════
    AUTO-FETCH FROM GOOGLE SHEETS
@@ -797,10 +881,12 @@ async function loadFromSheets(){
   const hSub = document.querySelector('.h-sub');
   hSub.textContent = '⏳ Buscando dados da planilha…';
   try {
-    const [ebTxt, capTxt, metasTxt] = await Promise.all([
-      fetch(GVT+'&gid=734559877').then(r=>r.text()),
-      fetch(GVT+'&gid=280005977').then(r=>r.text()),
-      fetch(GVT+'&gid=1765140443').then(r=>r.text()),
+    const ts = Date.now();
+    const [ebTxt, capTxt, metasTxt, leadsTxt] = await Promise.all([
+      fetch(GVT+'&gid=734559877&_='+ts,  {cache:'no-cache'}).then(r=>r.text()),
+      fetch(GVT+'&gid=280005977&_='+ts,  {cache:'no-cache'}).then(r=>r.text()),
+      fetch(GVT+'&gid=1765140443&_='+ts, {cache:'no-cache'}).then(r=>r.text()),
+      fetch(GVT+'&gid=1704118724&_='+ts, {cache:'no-cache'}).then(r=>r.text()),
     ]);
 
     /* — Ebook — */
@@ -813,10 +899,11 @@ async function loadFromSheets(){
         invest:parseMoney(r.Investido), imp:parseInt(r.Impressoes)||0,
         clicks:parseInt(r.Cliques)||0, leads:parseInt(r.Leads)||0 });
     });
-    // Rebuild ALL_DATES from fetched data
-    const dSet = new Set(EB_ROWS.map(r=>r.date));
+    // Rebuild ALL_DATES from both EB + CAP
+    const dSet = new Set([...EB_ROWS.map(r=>r.date), ...CAP_ROWS.map(r=>r.date)]);
     ALL_DATES.length = 0;
     [...dSet].sort((a,b)=>parseDate(a)-parseDate(b)).forEach(d=>ALL_DATES.push(d));
+    LATEST = parseDate(ALL_DATES[ALL_DATES.length-1]);
     // Rebuild EB_ORDER preserving known order, appending new
     const crSet = new Set(EB_ROWS.map(r=>r.criativo));
     const newOrder = EB_ORDER.filter(n=>crSet.has(n));
@@ -833,6 +920,12 @@ async function loadFromSheets(){
         imp:parseInt(r.Impressoes)||0, clicks:parseInt(r.Cliques)||0, leads:parseInt(r.Leads)||0 });
     });
 
+    /* — Leads (Orgânico) — */
+    const leadsRows = parseCSV(leadsTxt).map(r=>Object.values(r));
+    leadsRows.forEach(row => {
+      if((row[0]||'').toString().trim() === 'Orgânico') ORG_LEADS = parseInt(row[1])||0;
+    });
+
     /* — Metas — */
     parseCSV(metasTxt).forEach(r=>{
       const key = Object.values(r)[0];
@@ -847,8 +940,8 @@ async function loadFromSheets(){
     hSub.textContent = `Período: ${ALL_DATES[0]} – ${latest} · Atualizado ${hora}`;
 
   } catch(e){
-    console.warn('Sheets fetch error:', e);
-    hSub.textContent = 'Período: 29/04 – 04/05/2026 · Dados locais (sem conexão com a planilha)';
+    console.error('Sheets fetch error:', e);
+    hSub.textContent = `⚠ ${e.message || 'Erro de conexão'} — use o link do GitHub Pages para dados ao vivo`;
   }
   applyFilter(null, document.querySelector('.f-btn.active'));
 }
