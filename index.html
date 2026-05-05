@@ -353,7 +353,7 @@
       <div class="kpi c-cyan"><p class="kpi-lbl">CPC</p><p class="kpi-val white" id="cap-k-cpc">—</p><p class="kpi-note">Custo por Clique</p></div>
       <div class="kpi c-purple"><p class="kpi-lbl">Impressões</p><p class="kpi-val purple" id="cap-k-imp">—</p><p class="kpi-note">Total</p></div>
       <div class="kpi c-cyan"><p class="kpi-lbl">CTR</p><p class="kpi-val white" id="cap-k-ctr">—</p><p class="kpi-note">Taxa de clique</p></div>
-      <div class="kpi c-green"><p class="kpi-lbl">Leads</p><p class="kpi-val" style="color:var(--sub);font-size:14px">Em captação</p><p class="kpi-note">Recém lançada</p></div>
+      <div class="kpi c-green"><p class="kpi-lbl">Leads</p><p class="kpi-val green" id="cap-k-leads-val">—</p><p class="kpi-note" id="cap-k-leads-note">Carregando…</p></div>
     </div>
     <p class="sec">Distribuição · Investimento &amp; Cliques</p>
     <div class="row3">
@@ -705,8 +705,7 @@ function renderEbook(rows, nDays){
    RENDER — CAPTAÇÃO TAB
 ═══════════════════════════════════════ */
 function renderCaptacao(rows){
-  const tot   = sumRows(rows);
-  const order = rows.map(r=>r.criativo);
+  const tot = sumRows(rows);
 
   // KPIs
   set('cap-k-invest', fmtR(tot.invest));
@@ -714,14 +713,24 @@ function renderCaptacao(rows){
   set('cap-k-cpc',    tot.clicks>0 ? fmtR(tot.invest/tot.clicks) : '—');
   set('cap-k-imp',    fmtN(tot.imp));
   set('cap-k-ctr',    tot.imp>0 ? (tot.clicks/tot.imp*100).toFixed(2)+'%' : '—');
+  // Leads dinâmico
+  const leadsEl = R('cap-k-leads-val');
+  if(leadsEl){ leadsEl.textContent = tot.leads > 0 ? tot.leads : '—'; leadsEl.style.color = tot.leads>0?'var(--green)':'var(--sub)'; }
+  set('cap-k-leads-note', tot.leads>0 ? `CPL: ${tot.leads>0?fmtR(tot.invest/tot.leads):'—'}` : 'Sem leads ainda');
 
   // Quality chart
   renderQuality(rows, 'cap', null);
 
-  const names   = rows.map(r=>r.criativo.split(' · ')[0]);
-  const invests = rows.map(r=>r.invest);
-  const clicks  = rows.map(r=>r.clicks);
-  const ctrs    = rows.map(r=>r.imp>0 ? +((r.clicks/r.imp)*100).toFixed(2) : 0);
+  // Agregar por criativo (igual ao Ebook)
+  const capOrder = [...new Set(rows.map(r=>r.criativo))];
+  const byCap = {};
+  capOrder.forEach(n => byCap[n]={invest:0,imp:0,clicks:0,leads:0});
+  rows.forEach(r=>{ byCap[r.criativo].invest+=r.invest; byCap[r.criativo].imp+=r.imp; byCap[r.criativo].clicks+=r.clicks; byCap[r.criativo].leads+=r.leads; });
+
+  const names   = capOrder.map(n=>n.split(' · ')[0]);
+  const invests = capOrder.map(n=>byCap[n].invest);
+  const clicks  = capOrder.map(n=>byCap[n].clicks);
+  const ctrs    = capOrder.map(n=>byCap[n].imp>0 ? +((byCap[n].clicks/byCap[n].imp)*100).toFixed(2) : 0);
 
   mkChart('cap-invest-bar',{
     type:'bar', data:{ labels:names, datasets:[{ label:'R$ Investido', data:invests, backgroundColor:palette, borderRadius:6 }] },
@@ -776,7 +785,11 @@ function renderCaptacao(rows){
    RENDER — QUALITY CHART
 ═══════════════════════════════════════ */
 function renderQuality(rows, prefix, nDays){
-  const dates  = getFilteredDates(nDays);
+  // Usa só datas que têm dados reais nas rows
+  const rowDates = [...new Set(rows.map(r=>r.date))].sort((a,b)=>parseDate(a)-parseDate(b));
+  const filtered = getFilteredDates(nDays);
+  const dates = rowDates.filter(d=>filtered.includes(d));
+  if(!dates.length) return;
   const byDay  = groupByDay(rows, dates);
   const tot    = sumRows(rows);
 
@@ -800,7 +813,7 @@ function renderQuality(rows, prefix, nDays){
       plugins:{ legend:{position:'top',labels:{boxWidth:10,padding:12}} },
       scales:{
         x:{ grid:{color:C.grid} },
-        yA:{ position:'left',  grid:{color:C.grid}, ticks:{callback:v=>'R$ '+v,color:C.orange} },
+        yA:{ position:'left',  grid:{color:C.grid}, ticks:{callback:v=>'R$ '+parseFloat(v.toFixed(2)),color:C.orange} },
         yB:{ position:'right', grid:{drawOnChartArea:false}, ticks:{callback:v=>parseFloat(v.toFixed(2))+'%',color:C.cyan} },
       }
     }
