@@ -320,6 +320,7 @@
         <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:4px;">
           <div class="mini-kpi"><p class="mini-kpi-lbl">CPM</p><p class="mini-kpi-val" style="color:var(--orange)" id="eb-q-cpm">—</p></div>
           <div class="mini-kpi"><p class="mini-kpi-lbl">CTR Médio</p><p class="mini-kpi-val" style="color:var(--cyan)" id="eb-q-ctr">—</p></div>
+          <div class="mini-kpi"><p class="mini-kpi-lbl">Connect Rate Médio</p><p class="mini-kpi-val" style="color:var(--green)" id="eb-q-conn">—</p></div>
         </div>
       </div>
     </div>
@@ -373,6 +374,7 @@
         <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:4px;">
           <div class="mini-kpi"><p class="mini-kpi-lbl">CPM</p><p class="mini-kpi-val" style="color:var(--orange)" id="cap-q-cpm">—</p></div>
           <div class="mini-kpi"><p class="mini-kpi-lbl">CTR Médio</p><p class="mini-kpi-val" style="color:var(--cyan)" id="cap-q-ctr">—</p></div>
+          <div class="mini-kpi"><p class="mini-kpi-lbl">Connect Rate Médio</p><p class="mini-kpi-val" style="color:var(--green)" id="cap-q-conn">—</p></div>
         </div>
       </div>
     </div>
@@ -525,12 +527,12 @@ function updateGauge(id, pct){
 /* ═══════════════════════════════════════
    AGGREGATION HELPERS
 ═══════════════════════════════════════ */
-function sumRows(rows){ return rows.reduce((a,r)=>({invest:a.invest+r.invest,leads:a.leads+r.leads,clicks:a.clicks+r.clicks,imp:a.imp+r.imp}),{invest:0,leads:0,clicks:0,imp:0}); }
+function sumRows(rows){ return rows.reduce((a,r)=>({invest:a.invest+r.invest,leads:a.leads+r.leads,clicks:a.clicks+r.clicks,imp:a.imp+r.imp,lp:a.lp+(r.lp||0)}),{invest:0,leads:0,clicks:0,imp:0,lp:0}); }
 
 function groupByDay(rows, dates){
   const m={};
-  dates.forEach(d=>m[d]={invest:0,leads:0,clicks:0,imp:0});
-  rows.forEach(r=>{ if(m[r.date]){ m[r.date].invest+=r.invest; m[r.date].leads+=r.leads; m[r.date].clicks+=r.clicks; m[r.date].imp+=r.imp; } });
+  dates.forEach(d=>m[d]={invest:0,leads:0,clicks:0,imp:0,lp:0});
+  rows.forEach(r=>{ if(m[r.date]){ m[r.date].invest+=r.invest; m[r.date].leads+=r.leads; m[r.date].clicks+=r.clicks; m[r.date].imp+=r.imp; m[r.date].lp+=(r.lp||0); } });
   return m;
 }
 
@@ -772,27 +774,31 @@ function renderQuality(rows, prefix, nDays){
   const tot    = sumRows(rows);
 
   // KPIs
-  const cpm = tot.imp>0 ? (tot.invest/tot.imp*1000) : 0;
-  const ctr = tot.imp>0 ? (tot.clicks/tot.imp*100)  : 0;
-  set(prefix+'-q-cpm', 'R$ '+cpm.toFixed(2).replace('.',','));
-  set(prefix+'-q-ctr', ctr.toFixed(2).replace('.',',')+'%');
+  const cpm  = tot.imp>0    ? (tot.invest/tot.imp*1000) : 0;
+  const ctr  = tot.imp>0    ? (tot.clicks/tot.imp*100)  : 0;
+  const conn = tot.clicks>0 ? (tot.lp/tot.clicks*100)   : 0;
+  set(prefix+'-q-cpm',  'R$ '+cpm.toFixed(2).replace('.',','));
+  set(prefix+'-q-ctr',  ctr.toFixed(2).replace('.',',')+'%');
+  set(prefix+'-q-conn', conn.toFixed(1).replace('.',',')+'%');
 
   // Daily series
-  const dCPM = dates.map(d => byDay[d].imp>0 ? +(byDay[d].invest/byDay[d].imp*1000).toFixed(2) : null);
-  const dCTR = dates.map(d => byDay[d].imp>0 ? +(byDay[d].clicks/byDay[d].imp*100).toFixed(2)  : null);
+  const dCPM  = dates.map(d => byDay[d].imp>0    ? +(byDay[d].invest/byDay[d].imp*1000).toFixed(2) : null);
+  const dCTR  = dates.map(d => byDay[d].imp>0    ? +(byDay[d].clicks/byDay[d].imp*100).toFixed(2)  : null);
+  const dConn = dates.map(d => byDay[d].clicks>0 ? +(byDay[d].lp/byDay[d].clicks*100).toFixed(1)   : null);
 
   mkChart(prefix+'-quality',{
     type:'line',
     data:{ labels:dates, datasets:[
-      { label:'CPM (R$)', data:dCPM, borderColor:C.orange, backgroundColor:'rgba(249,115,22,0.05)', pointRadius:4, tension:0.4, fill:false, yAxisID:'yA', spanGaps:true },
-      { label:'CTR (%)',  data:dCTR, borderColor:C.cyan,   backgroundColor:'rgba(0,198,255,0.05)',  pointRadius:4, tension:0.4, fill:false, yAxisID:'yB', spanGaps:true },
+      { label:'CPM (R$)',        data:dCPM,  borderColor:C.orange, backgroundColor:'rgba(249,115,22,0.05)', pointRadius:4, tension:0.4, fill:false, yAxisID:'yA', spanGaps:true },
+      { label:'CTR (%)',         data:dCTR,  borderColor:C.cyan,   backgroundColor:'rgba(0,198,255,0.05)',  pointRadius:4, tension:0.4, fill:false, yAxisID:'yB', spanGaps:true },
+      { label:'Connect Rate (%)',data:dConn, borderColor:C.green,  backgroundColor:'rgba(0,229,160,0.05)',  pointRadius:4, tension:0.4, fill:false, yAxisID:'yB', spanGaps:true, borderDash:[5,3] },
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{position:'top',labels:{boxWidth:10,padding:12}} },
       scales:{
         x:{ grid:{color:C.grid} },
         yA:{ position:'left',  grid:{color:C.grid}, ticks:{callback:v=>'R$ '+parseFloat(v.toFixed(2)),color:C.orange} },
-        yB:{ position:'right', grid:{drawOnChartArea:false}, ticks:{callback:v=>parseFloat(v.toFixed(2))+'%',color:C.cyan} },
+        yB:{ position:'right', grid:{drawOnChartArea:false}, ticks:{callback:v=>parseFloat(v.toFixed(1))+'%'} },
       }
     }
   });
@@ -896,7 +902,8 @@ async function loadFromSheets(){
       if(r.URL) EB_URLS[nome] = r.URL;
       EB_ROWS.push({ date:shortDate(r.Date), criativo:nome, url:r.URL||'',
         invest:parseMoney(r.Investido), imp:parseInt(r.Impressoes)||0,
-        clicks:parseInt(r.Cliques)||0, leads:parseInt(r.Leads)||0 });
+        clicks:parseInt(r.Cliques)||0, leads:parseInt(r.Leads)||0,
+        lp:parseInt(r.Visualizacoes_LP)||0 });
     });
     // Rebuild ALL_DATES from both EB + CAP
     const dSet = new Set([...EB_ROWS.map(r=>r.date), ...CAP_ROWS.map(r=>r.date)]);
@@ -916,7 +923,8 @@ async function loadFromSheets(){
       CAP_ROWS.push({ date:shortDate(r.Date), criativo:mapCriativo(r.Criativo),
         pub:r.Publico||'', camp:extractCamp(r.Campanha||''),
         url:r.URL||'', invest:parseMoney(r.Investido),
-        imp:parseInt(r.Impressoes)||0, clicks:parseInt(r.Cliques)||0, leads:parseInt(r.Leads)||0 });
+        imp:parseInt(r.Impressoes)||0, clicks:parseInt(r.Cliques)||0, leads:parseInt(r.Leads)||0,
+        lp:parseInt(r.Visualizacoes_LP)||0 });
     });
 
     /* — Leads (Orgânico) — */
