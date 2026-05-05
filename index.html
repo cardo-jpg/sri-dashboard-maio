@@ -355,12 +355,6 @@
       <div class="kpi c-cyan"><p class="kpi-lbl">CTR</p><p class="kpi-val white" id="cap-k-ctr">—</p><p class="kpi-note">Taxa de clique</p></div>
       <div class="kpi c-green"><p class="kpi-lbl">Leads</p><p class="kpi-val green" id="cap-k-leads-val">—</p><p class="kpi-note" id="cap-k-leads-note">Carregando…</p></div>
     </div>
-    <p class="sec">Distribuição · Investimento &amp; Cliques</p>
-    <div class="row3">
-      <div class="chart-card"><p class="chart-ttl">Investimento por Criativo</p><p class="chart-sub">R$ alocado no período</p><div class="chart-wrap h240"><canvas id="cap-invest-bar"></canvas></div></div>
-      <div class="chart-card"><p class="chart-ttl">Cliques por Criativo</p><p class="chart-sub">Volume de link clicks</p><div class="chart-wrap h240"><canvas id="cap-clicks-bar"></canvas></div></div>
-      <div class="chart-card"><p class="chart-ttl">CTR por Criativo</p><p class="chart-sub">% cliques / impressões</p><div class="chart-wrap h240"><canvas id="cap-ctr-bar"></canvas></div></div>
-    </div>
     <p class="sec">Distribuição por Público</p>
     <div class="row2b">
       <div class="chart-card"><p class="chart-ttl">Investimento por Público</p><p class="chart-sub">Alocação por segmentação</p><div class="chart-wrap h200"><canvas id="cap-pub-invest"></canvas></div></div>
@@ -597,7 +591,8 @@ function renderGauges(ebRows, capRows, nDays){
   set('sv-cpl-eb',  cplEB ? fmtR(cplEB) : '—');
   set('sv-cpl-eb2', cplEB ? fmtR(cplEB) : '—');
   set('sv-cpl-status-eb', cplEB ? (cplEB<=1.50 ? '✓ Abaixo da meta R$1,50' : '⚠ Acima da meta R$1,50') : '—');
-  set('sv-leads-cap', cap.leads || 'Em captação');
+  const leadsCapEl = document.getElementById('sv-leads-cap');
+  if(leadsCapEl){ leadsCapEl.textContent = cap.leads > 0 ? cap.leads : 'Em captação'; leadsCapEl.style.color = cap.leads>0?'var(--green)':'var(--sub)'; }
   set('sv-invest-cap', fmtR(cap.invest));
   const cplCap = cap.leads > 0 ? cap.invest/cap.leads : null;
   const cplCapEl = document.getElementById('sv-cpl-cap');
@@ -727,23 +722,6 @@ function renderCaptacao(rows){
   capOrder.forEach(n => byCap[n]={invest:0,imp:0,clicks:0,leads:0});
   rows.forEach(r=>{ byCap[r.criativo].invest+=r.invest; byCap[r.criativo].imp+=r.imp; byCap[r.criativo].clicks+=r.clicks; byCap[r.criativo].leads+=r.leads; });
 
-  const names   = capOrder.map(n=>n.split(' · ')[0]);
-  const invests = capOrder.map(n=>byCap[n].invest);
-  const clicks  = capOrder.map(n=>byCap[n].clicks);
-  const ctrs    = capOrder.map(n=>byCap[n].imp>0 ? +((byCap[n].clicks/byCap[n].imp)*100).toFixed(2) : 0);
-
-  mkChart('cap-invest-bar',{
-    type:'bar', data:{ labels:names, datasets:[{ label:'R$ Investido', data:invests, backgroundColor:palette, borderRadius:6 }] },
-    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{grid:{color:C.grid},ticks:{callback:v=>'R$ '+v}},y:{grid:{color:C.grid}}} }
-  });
-  mkChart('cap-clicks-bar',{
-    type:'bar', data:{ labels:names, datasets:[{ label:'Cliques', data:clicks, backgroundColor:palette, borderRadius:6 }] },
-    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{grid:{color:C.grid}},y:{grid:{color:C.grid}}} }
-  });
-  mkChart('cap-ctr-bar',{
-    type:'bar', data:{ labels:names, datasets:[{ label:'CTR (%)', data:ctrs, backgroundColor:ctrs.map(v=>v>4?C.green:v>2?C.cyan:C.yellow), borderRadius:6 }] },
-    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{grid:{color:C.grid},ticks:{callback:v=>v+'%'}},y:{grid:{color:C.grid}}} }
-  });
 
   const pubMap = groupByPub(rows);
   const pubKeys = Object.keys(pubMap);
