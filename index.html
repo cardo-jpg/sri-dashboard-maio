@@ -590,9 +590,11 @@ function renderGauges(ebRows, capRows, nDays){
   const ebDays  = filterRows(EB_ROWS,  nDays).map(r=>r.date).filter((v,i,a)=>a.indexOf(v)===i).length || 1;
   const capDays = filterRows(CAP_ROWS, nDays).map(r=>r.date).filter((v,i,a)=>a.indexOf(v)===i).length || 1;
 
-  const pctG  = +((tot.leads+ORG_LEADS)/(META_EB_LEADS+META_CAP_LEADS+META_ORG_LEADS)*100).toFixed(1);
-  const pctEB = +(eb.leads/META_EB_LEADS*100).toFixed(1);
-  const pctC  = +(cap.leads/META_CAP_LEADS*100).toFixed(1);
+  // Usa leads do time (aba Leads), não do Meta
+  const totalLeads = LEADS_EB + LEADS_CAP + ORG_LEADS;
+  const pctG  = +(totalLeads/(META_EB_LEADS+META_CAP_LEADS+META_ORG_LEADS)*100).toFixed(1);
+  const pctEB = +(LEADS_EB/META_EB_LEADS*100).toFixed(1);
+  const pctC  = +(LEADS_CAP/META_CAP_LEADS*100).toFixed(1);
 
   updateGauge('g-geral',    pctG);
   updateGauge('g-ebook',    pctEB);
@@ -601,12 +603,12 @@ function renderGauges(ebRows, capRows, nDays){
   set('gv-geral',   pctG+'%');
   set('gv-ebook',   pctEB+'%');
   set('gv-cap',     pctC+'%');
-  set('gs-atual-geral', tot.leads + ORG_LEADS);
-  set('gs-media-geral', ((tot.leads+ORG_LEADS)/Math.max(1,ebDays)).toFixed(1));
-  set('gs-atual-eb', eb.leads);
-  set('gs-media-eb', (eb.leads/ebDays).toFixed(1));
-  set('gs-atual-cap', cap.leads);
-  set('gs-media-cap', capDays > 0 ? (cap.leads/capDays).toFixed(1) : '0');
+  set('gs-atual-geral', totalLeads);
+  set('gs-media-geral', (totalLeads/Math.max(1,ebDays)).toFixed(1));
+  set('gs-atual-eb',  LEADS_EB);
+  set('gs-media-eb',  (LEADS_EB/ebDays).toFixed(1));
+  set('gs-atual-cap', LEADS_CAP);
+  set('gs-media-cap', capDays > 0 ? (LEADS_CAP/capDays).toFixed(1) : '0');
   // Orgânico
   const pctOrg = +(ORG_LEADS/META_ORG_LEADS*100).toFixed(1);
   updateGauge('g-organico', Math.max(0.5, pctOrg));
@@ -617,26 +619,25 @@ function renderGauges(ebRows, capRows, nDays){
   const CAMPAIGN_END = new Date(2026, 4, 30); // 30/mai/2026
   const daysLeft = Math.max(1, Math.ceil((CAMPAIGN_END - new Date()) / 86400000));
   const metaTotal = META_EB_LEADS + META_CAP_LEADS + META_ORG_LEADS;
-  const totLeads  = tot.leads + ORG_LEADS;
   const fmtPace   = v => v <= 0 ? '✓' : v.toFixed(1);
-  set('gs-pace-geral', fmtPace((metaTotal - totLeads) / daysLeft));
-  set('gs-pace-eb',    fmtPace((META_EB_LEADS  - eb.leads)   / daysLeft));
-  set('gs-pace-cap',   fmtPace((META_CAP_LEADS - cap.leads)  / daysLeft));
-  set('gs-pace-org',   fmtPace((META_ORG_LEADS - ORG_LEADS)  / daysLeft));
+  set('gs-pace-geral', fmtPace((metaTotal - totalLeads) / daysLeft));
+  set('gs-pace-eb',    fmtPace((META_EB_LEADS  - LEADS_EB)  / daysLeft));
+  set('gs-pace-cap',   fmtPace((META_CAP_LEADS - LEADS_CAP) / daysLeft));
+  set('gs-pace-org',   fmtPace((META_ORG_LEADS - ORG_LEADS) / daysLeft));
 
-  // Summary
+  // Summary — CPL usa leads reais do time
   set('sv-investido-total', fmtR(tot.invest));
   set('sv-pct-orc', (tot.invest/(META_EB_ORC+META_CAP_ORC)*100).toFixed(2)+'%');
-  set('sv-leads-eb', eb.leads);
+  set('sv-leads-eb', LEADS_EB);
   set('sv-invest-eb', fmtR(eb.invest));
-  const cplEB = eb.leads > 0 ? eb.invest/eb.leads : null;
+  const cplEB = LEADS_EB > 0 ? eb.invest/LEADS_EB : null;
   set('sv-cpl-eb',  cplEB ? fmtR(cplEB) : '—');
   set('sv-cpl-eb2', cplEB ? fmtR(cplEB) : '—');
   set('sv-cpl-status-eb', cplEB ? (cplEB<=1.50 ? '✓ Abaixo da meta R$1,50' : '⚠ Acima da meta R$1,50') : '—');
   const leadsCapEl = document.getElementById('sv-leads-cap');
-  if(leadsCapEl){ leadsCapEl.textContent = cap.leads > 0 ? cap.leads : 'Em captação'; leadsCapEl.style.color = cap.leads>0?'var(--green)':'var(--sub)'; }
+  if(leadsCapEl){ leadsCapEl.textContent = LEADS_CAP > 0 ? LEADS_CAP : '—'; leadsCapEl.style.color = LEADS_CAP>0?'var(--green)':'var(--sub)'; }
   set('sv-invest-cap', fmtR(cap.invest));
-  const cplCap = cap.leads > 0 ? cap.invest/cap.leads : null;
+  const cplCap = LEADS_CAP > 0 ? cap.invest/LEADS_CAP : null;
   const cplCapEl = document.getElementById('sv-cpl-cap');
   if(cplCap){
     if(cplCapEl){ cplCapEl.textContent = fmtR(cplCap); cplCapEl.style.color = cplCap<=2 ? 'var(--green)' : 'var(--red)'; }
@@ -1036,6 +1037,8 @@ let META_ORG_LEADS = 1000;
 let META_EB_ORC    = 366;
 let META_CAP_ORC   = 375;
 let ORG_LEADS      = 0;
+let LEADS_EB       = 0;
+let LEADS_CAP      = 0;
 
 /* ═══════════════════════════════════════
    AUTO-FETCH FROM GOOGLE SHEETS
@@ -1129,15 +1132,21 @@ async function loadFromSheets(){
     [...dSet].sort((a,b)=>parseDate(a)-parseDate(b)).forEach(d=>ALL_DATES.push(d));
     LATEST = parseDate(ALL_DATES[ALL_DATES.length-1]);
 
-    /* — Leads (Orgânico) — */
-    const leadsRows = parseCSV(leadsTxt).map(r=>Object.values(r));
-    // Tenta por texto (case-insensitive, sem depender de acento)
-    leadsRows.forEach(row => {
-      const k = (row[0]||'').toString().toLowerCase().replace(/[^a-z]/g,'');
-      if(k.startsWith('org')) ORG_LEADS = parseInt(row[1])||0;
+    /* — Leads (Orgânico + Ebook + Captação — números do time, não do Meta) — */
+    LEADS_EB = 0; LEADS_CAP = 0; ORG_LEADS = 0;
+    const rawLeadsLines = leadsTxt.trim().split('\n')
+      .map(l => csvLine(l).map(v => v.replace(/^"|"$/g,'').trim()));
+    rawLeadsLines.forEach(cols => {
+      const k0 = (cols[0]||'').toLowerCase();
+      const k2 = (cols[2]||'').toLowerCase();
+      if(k0.includes('org')) ORG_LEADS  = parseInt(cols[1])||0;
+      if(k0 === 'ads')       LEADS_CAP  = parseInt(cols[1])||0;
+      if(k2.includes('ebook') || k2 === 'ads') LEADS_EB = parseInt(cols[3])||0;
     });
-    // Fallback: segunda linha = Orgânico (posição fixa na aba Leads)
-    if(ORG_LEADS === 0 && leadsRows[0]) ORG_LEADS = parseInt(leadsRows[0][1])||0;
+    // Fallbacks por posição caso o texto mude
+    if(!ORG_LEADS  && rawLeadsLines[1]) ORG_LEADS  = parseInt(rawLeadsLines[1][1])||0;
+    if(!LEADS_CAP  && rawLeadsLines[2]) LEADS_CAP  = parseInt(rawLeadsLines[2][1])||0;
+    if(!LEADS_EB   && rawLeadsLines[0]) LEADS_EB   = parseInt(rawLeadsLines[0][3])||0;
 
     /* — Metas — */
     parseCSV(metasTxt).forEach(r=>{
