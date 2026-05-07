@@ -396,16 +396,18 @@
       <div class="chart-card"><p class="chart-ttl">Onde Moram</p><p class="chart-sub">Brasil vs. exterior</p><div class="chart-wrap h200"><canvas id="ps-mora"></canvas></div></div>
     </div>
 
-    <p class="sec">Renda &amp; Formação</p>
-    <div class="row2b">
+    <p class="sec">Renda, Formação &amp; Idiomas</p>
+    <div class="row3">
       <div class="chart-card"><p class="chart-ttl">Faixa Salarial</p><p class="chart-sub">Renda mensal declarada</p><div class="chart-wrap h240"><canvas id="ps-salario"></canvas></div></div>
       <div class="chart-card"><p class="chart-ttl">Formação Acadêmica</p><p class="chart-sub">Nível de escolaridade</p><div class="chart-wrap h240"><canvas id="ps-formacao"></canvas></div></div>
+      <div class="chart-card"><p class="chart-ttl">Nível de Inglês</p><p class="chart-sub">Auto-avaliação dos inscritos</p><div class="chart-wrap h240"><canvas id="ps-ingles"></canvas></div></div>
     </div>
 
-    <p class="sec">Idiomas &amp; Área de Atuação</p>
-    <div class="row2b">
-      <div class="chart-card"><p class="chart-ttl">Nível de Inglês</p><p class="chart-sub">Auto-avaliação dos inscritos</p><div class="chart-wrap h200"><canvas id="ps-ingles"></canvas></div></div>
-      <div class="chart-card"><p class="chart-ttl">Área de Atuação</p><p class="chart-sub">Tamanho = frequência de respostas</p><div style="position:relative;height:280px;"><canvas id="ps-area" style="width:100%;height:100%;"></canvas></div></div>
+    <p class="sec">Área de Atuação</p>
+    <div class="chart-card" style="margin-bottom:18px;">
+      <p class="chart-ttl">Área de Atuação</p>
+      <p class="chart-sub">Tamanho = frequência de respostas</p>
+      <div style="position:relative;height:320px;"><canvas id="ps-area" style="width:100%;height:100%;"></canvas></div>
     </div>
 
     <p class="sec">Engajamento &amp; Localização</p>
@@ -875,6 +877,9 @@ function switchTab(name, btn){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   R('panel-'+name).classList.add('active');
   btn.classList.add('active');
+  const hide = name === 'pesquisa';
+  document.querySelector('.gauge-section').style.display = hide ? 'none' : '';
+  document.querySelector('.filter-bar').style.display    = hide ? 'none' : '';
 }
 
 /* ═══════════════════════════════════════
