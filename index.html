@@ -58,10 +58,10 @@
     .gauge-pct.cyan{color:var(--cyan);} .gauge-pct.green{color:var(--green);} .gauge-pct.purple{color:var(--purple);}
     .gauge-pct-lbl{font-size:9px;color:var(--sub);letter-spacing:1.5px;text-transform:uppercase;}
     .gauge-range{display:flex;justify-content:space-between;font-size:10px;color:var(--sub2);margin-top:2px;padding:0 4px;}
-    .gauge-stats{display:flex;justify-content:center;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+    .gauge-stats{display:flex;justify-content:center;gap:32px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
     .gauge-stats>div{text-align:center;}
     .gauge-stats span{display:block;font-size:9px;color:var(--sub);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;}
-    .gauge-stats strong{font-size:14px;font-weight:800;color:var(--text);}
+    .gauge-stats strong{font-size:18px;font-weight:800;color:var(--text);}
     .gauge-stats .pace-val{color:var(--yellow);}
 
     /* Summary row */
@@ -200,12 +200,10 @@
             <div class="gauge-pct-lbl">atingido</div>
           </div>
         </div>
-        <div class="gauge-range"><span>0</span><span id="gr-geral">Meta: 2.300</span></div>
+        <div class="gauge-range"><span id="gs-atual-geral">—</span><span id="gr-geral">Meta: 2.300</span></div>
         <div class="gauge-stats">
-          <div><span>Atual</span><strong id="gs-atual-geral">—</strong></div>
-          <div><span>Meta</span><strong>2.300</strong></div>
-          <div><span>Atual/dia</span><strong id="gs-media-geral">—</strong></div>
-          <div><span>Nec./dia</span><strong class="pace-val" id="gs-pace-geral">—</strong></div>
+          <div><span>Média/dia</span><strong id="gs-media-geral">—</strong></div>
+          <div><span>Meta/dia</span><strong class="pace-val" id="gs-pace-geral">—</strong></div>
         </div>
       </div>
 
@@ -217,12 +215,10 @@
             <div class="gauge-pct-lbl">atingido</div>
           </div>
         </div>
-        <div class="gauge-range"><span>0</span><span>Meta: 550 · R$366</span></div>
+        <div class="gauge-range"><span id="gs-atual-eb">—</span><span>Meta: 550 · R$366</span></div>
         <div class="gauge-stats">
-          <div><span>Atual</span><strong id="gs-atual-eb">—</strong></div>
-          <div><span>Meta</span><strong>550</strong></div>
-          <div><span>Atual/dia</span><strong id="gs-media-eb">—</strong></div>
-          <div><span>Nec./dia</span><strong class="pace-val" id="gs-pace-eb">—</strong></div>
+          <div><span>Média/dia</span><strong id="gs-media-eb">—</strong></div>
+          <div><span>Meta/dia</span><strong class="pace-val" id="gs-pace-eb">—</strong></div>
         </div>
       </div>
 
@@ -234,12 +230,10 @@
             <div class="gauge-pct-lbl">atingido</div>
           </div>
         </div>
-        <div class="gauge-range"><span>0</span><span>Meta: 750 · R$375</span></div>
+        <div class="gauge-range"><span id="gs-atual-cap">—</span><span>Meta: 750 · R$375</span></div>
         <div class="gauge-stats">
-          <div><span>Atual</span><strong id="gs-atual-cap">—</strong></div>
-          <div><span>Meta</span><strong>750</strong></div>
-          <div><span>Atual/dia</span><strong id="gs-media-cap">—</strong></div>
-          <div><span>Nec./dia</span><strong class="pace-val" id="gs-pace-cap">—</strong></div>
+          <div><span>Média/dia</span><strong id="gs-media-cap">—</strong></div>
+          <div><span>Meta/dia</span><strong class="pace-val" id="gs-pace-cap">—</strong></div>
         </div>
       </div>
 
@@ -251,12 +245,10 @@
             <div class="gauge-pct-lbl">atingido</div>
           </div>
         </div>
-        <div class="gauge-range"><span>0</span><span>Meta: 1.000</span></div>
+        <div class="gauge-range"><span id="gs-atual-org">—</span><span>Meta: 1.000</span></div>
         <div class="gauge-stats">
-          <div><span>Atual</span><strong id="gs-atual-org">—</strong></div>
-          <div><span>Meta</span><strong>1.000</strong></div>
-          <div><span>Atual/dia</span><strong id="gs-media-org">—</strong></div>
-          <div><span>Nec./dia</span><strong class="pace-val" id="gs-pace-org">—</strong></div>
+          <div><span>Média/dia</span><strong id="gs-media-org">—</strong></div>
+          <div><span>Meta/dia</span><strong class="pace-val" id="gs-pace-org">—</strong></div>
         </div>
       </div>
 
@@ -622,7 +614,7 @@ function renderGauges(ebRows, capRows, nDays){
   set('gs-atual-org', ORG_LEADS);
   set('gs-media-org', (ORG_LEADS/Math.max(1,ebDays)).toFixed(1));
   // Pace diário necessário
-  const CAMPAIGN_END = new Date(2026, 5, 2); // 02/jun/2026
+  const CAMPAIGN_END = new Date(2026, 4, 30); // 30/mai/2026
   const daysLeft = Math.max(1, Math.ceil((CAMPAIGN_END - new Date()) / 86400000));
   const metaTotal = META_EB_LEADS + META_CAP_LEADS + META_ORG_LEADS;
   const totLeads  = tot.leads + ORG_LEADS;
