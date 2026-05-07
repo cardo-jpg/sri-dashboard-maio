@@ -872,6 +872,28 @@ function applyFilter(nDays, btn){
 /* ═══════════════════════════════════════
    TABS
 ═══════════════════════════════════════ */
+function renderWordCloud(){
+  if(!window._wcReady || !SURVEY_ROWS.length) return;
+  const areaCounts = countBy(SURVEY_ROWS, SC.area);
+  const wordList   = Object.entries(areaCounts)
+    .map(([w,c])=>[w.split('(')[0].trim(), c])
+    .filter(([w])=>w.length>1)
+    .sort((a,b)=>b[1]-a[1]).slice(0,50);
+  const wcEl = document.getElementById('ps-area');
+  if(!wcEl || !window.WordCloud || !wordList.length) return;
+  const wcColors = ['#a78bfa','#818cf8','#60a5fa','#00c6ff','#00e5a0','#c084fc','#7dd3fc','#6ee7b7','#93c5fd','#a5b4fc'];
+  const maxC = Math.max(...wordList.map(([,c])=>c));
+  wcEl.width  = wcEl.parentElement.offsetWidth;
+  wcEl.height = wcEl.parentElement.offsetHeight;
+  WordCloud(wcEl, {
+    list: wordList.map(([w,c])=>[w, Math.round(11 + (c/maxC)*22)]),
+    gridSize:4, weightFactor:1,
+    fontFamily:'Inter, sans-serif', fontWeight:'700',
+    color:(_,__,___,____,idx)=>wcColors[idx % wcColors.length],
+    backgroundColor:'#131f30', rotateRatio:0, minSize:8, shrinkToFit:true,
+  });
+}
+
 function switchTab(name, btn){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -880,6 +902,7 @@ function switchTab(name, btn){
   const hide = name === 'pesquisa';
   document.querySelector('.gauge-section').style.display = hide ? 'none' : '';
   document.querySelector('.filter-bar').style.display    = hide ? 'none' : '';
+  if(name === 'pesquisa') setTimeout(renderWordCloud, 50);
 }
 
 /* ═══════════════════════════════════════
@@ -969,28 +992,8 @@ function renderPesquisa(){
   psDonut('ps-filhos', countBy(rows,SC.filhos,2));
   psBar('ps-renda',    countBy(rows,SC.renda));
 
-  // Word cloud — Área de Atuação
-  setTimeout(()=>{
-    const areaCounts = countBy(rows, SC.area);
-    const wordList   = Object.entries(areaCounts)
-      .map(([w,c])=>[w.split('(')[0].trim(), c])
-      .filter(([w])=>w.length>1)
-      .sort((a,b)=>b[1]-a[1]).slice(0,50);
-    const wcEl = document.getElementById('ps-area');
-    if(wcEl && window.WordCloud && wordList.length){
-      wcEl.width  = wcEl.parentElement.offsetWidth  || 600;
-      wcEl.height = wcEl.parentElement.offsetHeight || 320;
-      const wcColors = ['#a78bfa','#818cf8','#60a5fa','#00c6ff','#00e5a0','#c084fc','#7dd3fc','#6ee7b7','#93c5fd','#a5b4fc'];
-      const maxC = Math.max(...wordList.map(([,c])=>c));
-      WordCloud(wcEl, {
-        list: wordList.map(([w,c],i)=>[w, Math.round(11 + (c/maxC)*22)]),
-        gridSize:4, weightFactor:1,
-        fontFamily:'Inter, sans-serif', fontWeight:'700',
-        color:(_,__,___,____,idx)=>wcColors[idx % wcColors.length],
-        backgroundColor:'#131f30', rotateRatio:0, minSize:8, shrinkToFit:true,
-      });
-    }
-  }, 200);
+  // Word cloud renderizado quando a aba for aberta (não agora — aba pode estar oculta)
+  window._wcReady = true;
 }
 
 /* ═══════════════════════════════════════
