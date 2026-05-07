@@ -407,7 +407,7 @@
     <div class="chart-card" style="margin-bottom:18px;">
       <p class="chart-ttl">Área de Atuação</p>
       <p class="chart-sub">Tamanho = frequência de respostas</p>
-      <div style="position:relative;height:400px;"><canvas id="ps-area" style="width:100%;height:100%;"></canvas></div>
+      <div id="ps-area" style="min-height:360px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 12px;padding:16px 8px;background:#131f30;border-radius:8px;"></div>
     </div>
 
     <p class="sec">Engajamento &amp; Localização</p>
@@ -879,19 +879,17 @@ function renderWordCloud(){
     .map(([w,c])=>[w.split('(')[0].trim(), c])
     .filter(([w])=>w.length>1)
     .sort((a,b)=>b[1]-a[1]).slice(0,50);
-  const wcEl = document.getElementById('ps-area');
-  if(!wcEl || !window.WordCloud || !wordList.length) return;
+  const el = document.getElementById('ps-area');
+  if(!el || !wordList.length) return;
   const wcColors = ['#a78bfa','#818cf8','#60a5fa','#00c6ff','#00e5a0','#c084fc','#7dd3fc','#6ee7b7','#93c5fd','#a5b4fc'];
   const maxC = Math.max(...wordList.map(([,c])=>c));
-  wcEl.width  = wcEl.parentElement.offsetWidth;
-  wcEl.height = wcEl.parentElement.offsetHeight;
-  WordCloud(wcEl, {
-    list: wordList.map(([w,c])=>[w, Math.round(11 + (c/maxC)*22)]),
-    gridSize:4, weightFactor:1,
-    fontFamily:'Inter, sans-serif', fontWeight:'700',
-    color:(_,__,___,____,idx)=>wcColors[idx % wcColors.length],
-    backgroundColor:'#131f30', rotateRatio:0, minSize:8, shrinkToFit:true,
-  });
+  // Embaralha para distribuição visual mais natural
+  const shuffled = [...wordList].sort(()=>Math.random()-0.5);
+  el.innerHTML = shuffled.map(([w,c],i)=>{
+    const size = Math.round(12 + (c/maxC)*26);
+    const color = wcColors[i % wcColors.length];
+    return `<span style="font-size:${size}px;color:${color};font-weight:700;font-family:'Inter',sans-serif;padding:3px 6px;cursor:default;line-height:1.3;white-space:nowrap;">${w}</span>`;
+  }).join('');
 }
 
 function switchTab(name, btn){
