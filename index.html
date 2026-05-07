@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>[PV] Dashboard Lançamento SRI Maio</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     :root {
@@ -435,7 +436,7 @@
     <p class="sec">Idiomas &amp; Área de Atuação</p>
     <div class="row2b">
       <div class="chart-card"><p class="chart-ttl">Nível de Inglês</p><p class="chart-sub">Auto-avaliação dos inscritos</p><div class="chart-wrap h200"><canvas id="ps-ingles"></canvas></div></div>
-      <div class="chart-card"><p class="chart-ttl">Área de Atuação</p><p class="chart-sub">Top 10 profissões</p><div class="chart-wrap h200"><canvas id="ps-area"></canvas></div></div>
+      <div class="chart-card"><p class="chart-ttl">Área de Atuação</p><p class="chart-sub">Tamanho = frequência de respostas</p><div style="position:relative;height:200px;"><canvas id="ps-area" style="width:100%;height:100%;"></canvas></div></div>
     </div>
 
     <p class="sec">Engajamento &amp; Localização</p>
@@ -444,11 +445,10 @@
       <div class="chart-card"><p class="chart-ttl">Há Quanto Tempo Segue no Instagram</p><p class="chart-sub">Tempo de relacionamento com o perfil</p><div class="chart-wrap h260"><canvas id="ps-instagram"></canvas></div></div>
     </div>
 
-    <p class="sec">Perfil Familiar</p>
+    <p class="sec">Perfil Familiar &amp; Renda Extra</p>
     <div class="row3">
-      <div class="chart-card"><p class="chart-ttl">Tem Filhos?</p><p class="chart-sub">Distribuição</p><div class="chart-wrap h200"><canvas id="ps-filhos"></canvas></div></div>
-      <div class="chart-card"><p class="chart-ttl">Sobre Renda Extra</p><p class="chart-sub">Postura em relação à renda extra</p><div class="chart-wrap h200"><canvas id="ps-renda"></canvas></div></div>
-      <div></div>
+      <div class="chart-card"><p class="chart-ttl">Tem Filhos?</p><p class="chart-sub">Distribuição</p><div class="chart-wrap h220"><canvas id="ps-filhos"></canvas></div></div>
+      <div class="chart-card" style="grid-column:span 2"><p class="chart-ttl">Sobre Renda Extra</p><p class="chart-sub">Postura em relação à renda extra</p><div class="chart-wrap h220"><canvas id="ps-renda"></canvas></div></div>
     </div>
   </div>
 </div>
@@ -930,9 +930,10 @@ const SC = {
   renda:     'Quando o assunto é fazer renda extra, você:',
 };
 
-function countBy(rows, key){
+function countBy(rows, key, minCount=1){
   const c={};
   rows.forEach(r=>{ const v=(r[key]||'').trim(); if(v) c[v]=(c[v]||0)+1; });
+  if(minCount>1) Object.keys(c).forEach(k=>{ if(c[k]<minCount) delete c[k]; });
   return c;
 }
 function sortedEntries(counts, order){
@@ -978,22 +979,42 @@ function renderPesquisa(){
     });
   }
 
-  psDonut('ps-genero', countBy(rows,SC.genero));
+  psDonut('ps-genero', countBy(rows,SC.genero,2));
   psBar('ps-idade',    countBy(rows,SC.idade),
     ['Menos de 20 anos','20 a 24 anos','25 a 29 anos','30 a 35 anos','36 a 39 anos','40 a 44 anos','45 a 50 anos','Mais de 50 anos']);
-  psDonut('ps-mora',   countBy(rows,SC.mora));
+  psDonut('ps-mora',   countBy(rows,SC.mora,2));
   psBar('ps-salario',  countBy(rows,SC.salario),
     ['Até 1500 reais','De 1500 a 2 mil reais','De 2 a 3 mil reais','De 3 a 5 mil reais','De 5 a 10 mil reais','Acima de 10 mil reais']);
   psBar('ps-formacao', countBy(rows,SC.formacao),
     ['Ensino médio COMPLETO','Ensino superior INCOMPLETO','Ensino superior COMPLETO','Pós-graduação INCOMPLETA','Pós-graduação COMPLETA','Mestrado/Doutorado']);
   psBar('ps-ingles',   countBy(rows,SC.ingles),
     ['Básico','Intermediário','Consigo me comunicar, mas com um pouco de dificuldade','Me sinto confiante para falar inglês']);
-  psBar('ps-area',     countBy(rows,SC.area), null, 10);
   psBar('ps-estado',   estCounts, null, 10);
   psBar('ps-instagram',countBy(rows,SC.instagram),
     ['Menos de 1 mês','Entre 1 e 3 meses','Entre 3 e 6 meses','Entre 6 meses e 1 ano','Mais de 1 ano','Mais de 2 anos','Mais de 3 anos']);
-  psDonut('ps-filhos', countBy(rows,SC.filhos));
+  psDonut('ps-filhos', countBy(rows,SC.filhos,2));
   psBar('ps-renda',    countBy(rows,SC.renda));
+
+  // Word cloud — Área de Atuação
+  setTimeout(()=>{
+    const areaCounts = countBy(rows, SC.area);
+    const wordList   = Object.entries(areaCounts)
+      .map(([w,c])=>[w.split('(')[0].trim(), c])
+      .filter(([w])=>w.length>1)
+      .sort((a,b)=>b[1]-a[1]).slice(0,25);
+    const wcEl = document.getElementById('ps-area');
+    if(wcEl && window.WordCloud && wordList.length){
+      wcEl.width  = wcEl.parentElement.offsetWidth  || 400;
+      wcEl.height = wcEl.parentElement.offsetHeight || 200;
+      WordCloud(wcEl, {
+        list: wordList.map(([w,c])=>[w, Math.max(14, c*14)]),
+        gridSize:6, weightFactor:1,
+        fontFamily:'Inter, sans-serif', fontWeight:'700',
+        color:()=>psPal[Math.floor(Math.random()*psPal.length)],
+        backgroundColor:'#131f30', rotateRatio:0, minSize:10, shrinkToFit:true,
+      });
+    }
+  }, 200);
 }
 
 /* ═══════════════════════════════════════
