@@ -975,17 +975,17 @@ function renderPesquisa(){
     const wordList   = Object.entries(areaCounts)
       .map(([w,c])=>[w.split('(')[0].trim(), c])
       .filter(([w])=>w.length>1)
-      .sort((a,b)=>b[1]-a[1]).slice(0,25);
+      .sort((a,b)=>b[1]-a[1]).slice(0,50);
     const wcEl = document.getElementById('ps-area');
     if(wcEl && window.WordCloud && wordList.length){
-      wcEl.width  = wcEl.parentElement.offsetWidth  || 400;
-      wcEl.height = wcEl.parentElement.offsetHeight || 200;
+      wcEl.width  = wcEl.parentElement.offsetWidth  || 600;
+      wcEl.height = wcEl.parentElement.offsetHeight || 320;
       WordCloud(wcEl, {
-        list: wordList.map(([w,c])=>[w, Math.max(14, c*14)]),
-        gridSize:6, weightFactor:1,
+        list: wordList.map(([w,c])=>[w, Math.max(10, c*7)]),
+        gridSize:4, weightFactor:1,
         fontFamily:'Inter, sans-serif', fontWeight:'700',
         color:()=>psPal[Math.floor(Math.random()*psPal.length)],
-        backgroundColor:'#131f30', rotateRatio:0, minSize:10, shrinkToFit:true,
+        backgroundColor:'#131f30', rotateRatio:0, minSize:8, shrinkToFit:true,
       });
     }
   }, 200);
