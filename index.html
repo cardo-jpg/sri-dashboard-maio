@@ -980,12 +980,13 @@ function renderPesquisa(){
     if(wcEl && window.WordCloud && wordList.length){
       wcEl.width  = wcEl.parentElement.offsetWidth  || 600;
       wcEl.height = wcEl.parentElement.offsetHeight || 320;
+      const wcColors = ['#a78bfa','#818cf8','#60a5fa','#00c6ff','#00e5a0','#c084fc','#7dd3fc','#6ee7b7','#93c5fd','#a5b4fc'];
       WordCloud(wcEl, {
-        list: wordList.map(([w,c])=>[w, Math.max(10, c*7)]),
-        gridSize:4, weightFactor:1,
+        list: wordList.map(([w,c])=>[w, Math.max(8, c*4)]),
+        gridSize:6, weightFactor:1,
         fontFamily:'Inter, sans-serif', fontWeight:'700',
-        color:()=>psPal[Math.floor(Math.random()*psPal.length)],
-        backgroundColor:'#131f30', rotateRatio:0, minSize:8, shrinkToFit:true,
+        color:(_,__, ___, ____, idx)=>wcColors[idx % wcColors.length],
+        backgroundColor:'#131f30', rotateRatio:0, minSize:6, shrinkToFit:true,
       });
     }
   }, 200);
