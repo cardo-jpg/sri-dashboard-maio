@@ -659,9 +659,11 @@ function renderEbook(rows, nDays){
   const byCr  = groupByCriativo(rows, EB_ORDER);
   const nDaysLabel = nDays ? nDays+' dias' : dates.length+' dias';
 
-  // Fator de escala: distribui LEADS_EB real proporcionalmente ao Meta dia a dia
+  // Leads diários: usa dados reais do time (aba Leads) quando disponível, senão escala Meta
   const ebScaleFactor = (tot.leads > 0 && LEADS_EB > 0) ? LEADS_EB / tot.leads : 1;
-  const dailyLeadsScaled = dates.map(d => Math.round((byDay[d].leads||0) * ebScaleFactor));
+  const dailyLeadsScaled = dates.map(d =>
+    LEADS_DAILY_EB[d] !== undefined ? LEADS_DAILY_EB[d] : Math.round((byDay[d].leads||0) * ebScaleFactor)
+  );
 
   // KPIs — investido/cliques/impressões filtram por data; leads e CPL são fixos
   const ebTotAll = sumRows(EB_ROWS); // total geral sem filtro, para CPL correto
@@ -1093,6 +1095,9 @@ let META_CAP_ORC   = 375;
 let ORG_LEADS      = 0;
 let LEADS_EB       = 0;
 let LEADS_CAP      = 0;
+let LEADS_DAILY_EB  = {}; // {date: leads do dia}
+let LEADS_DAILY_CAP = {};
+let LEADS_DAILY_ORG = {};
 
 /* ═══════════════════════════════════════
    AUTO-FETCH FROM GOOGLE SHEETS
@@ -1190,21 +1195,27 @@ async function loadFromSheets(){
     [...dSet].sort((a,b)=>parseDate(a)-parseDate(b)).forEach(d=>ALL_DATES.push(d));
     LATEST = parseDate(ALL_DATES[ALL_DATES.length-1]);
 
-    /* — Leads (Orgânico + Ebook + Captação — números do time, não do Meta) — */
+    /* — Leads tab (acumulado por data — moça insere diariamente) — */
     LEADS_EB = 0; LEADS_CAP = 0; ORG_LEADS = 0;
-    const rawLeadsLines = leadsTxt.trim().split('\n')
-      .map(l => csvLine(l).map(v => v.replace(/^"|"$/g,'').trim()));
-    rawLeadsLines.forEach(cols => {
-      const k0 = (cols[0]||'').toLowerCase();
-      const k2 = (cols[2]||'').toLowerCase();
-      if(k0.includes('org')) ORG_LEADS  = parseInt(cols[1])||0;
-      if(k0 === 'ads')       LEADS_CAP  = parseInt(cols[1])||0;
-      if(k2.includes('ebook') || k2 === 'ads') LEADS_EB = parseInt(cols[3])||0;
+    LEADS_DAILY_EB = {}; LEADS_DAILY_CAP = {}; LEADS_DAILY_ORG = {};
+    let prevEB = 0, prevCap = 0, prevOrg = 0;
+    parseCSV(leadsTxt).forEach(r => {
+      const org    = parseInt(r['Leads Captação Org'])||0;
+      const adsCap = parseInt(r['Leads Captação Ads'])||0;
+      const adsEB  = parseInt(r['Ebook Ads'])||0;
+      if(!org && !adsCap && !adsEB) return; // linha vazia
+      const date = shortDate(r['Data']||'');
+      if(date){
+        LEADS_DAILY_EB[date]  = Math.max(0, adsEB  - prevEB);
+        LEADS_DAILY_CAP[date] = Math.max(0, adsCap - prevCap);
+        LEADS_DAILY_ORG[date] = Math.max(0, org    - prevOrg);
+      }
+      prevEB = adsEB; prevCap = adsCap; prevOrg = org;
+      // Último valor = total atual da campanha
+      LEADS_EB  = adsEB;
+      LEADS_CAP = adsCap;
+      ORG_LEADS = org;
     });
-    // Fallbacks por posição caso o texto mude
-    if(!ORG_LEADS  && rawLeadsLines[1]) ORG_LEADS  = parseInt(rawLeadsLines[1][1])||0;
-    if(!LEADS_CAP  && rawLeadsLines[2]) LEADS_CAP  = parseInt(rawLeadsLines[2][1])||0;
-    if(!LEADS_EB   && rawLeadsLines[0]) LEADS_EB   = parseInt(rawLeadsLines[0][3])||0;
 
     /* — Metas — */
     parseCSV(metasTxt).forEach(r=>{
