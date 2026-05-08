@@ -657,19 +657,23 @@ function renderEbook(rows, nDays){
   const byCr  = groupByCriativo(rows, EB_ORDER);
   const nDaysLabel = nDays ? nDays+' dias' : dates.length+' dias';
 
-  // KPIs
+  // Fator de escala: distribui LEADS_EB real proporcionalmente ao Meta dia a dia
+  const ebScaleFactor = (tot.leads > 0 && LEADS_EB > 0) ? LEADS_EB / tot.leads : 1;
+  const dailyLeadsScaled = dates.map(d => Math.round((byDay[d].leads||0) * ebScaleFactor));
+
+  // KPIs — usa total real (aba Leads)
   set('eb-k-invest',   fmtR(tot.invest));
   set('eb-k-invest-n', nDaysLabel);
-  set('eb-k-leads',    tot.leads);
+  set('eb-k-leads',    LEADS_EB || tot.leads);
   set('eb-k-leads-n',  nDaysLabel);
-  set('eb-k-cpl',      tot.leads>0 ? fmtR(tot.invest/tot.leads) : '—');
+  set('eb-k-cpl',      LEADS_EB>0 ? fmtR(tot.invest/LEADS_EB) : '—');
   set('eb-k-clicks',   tot.clicks);
   set('eb-k-cpc',      tot.clicks>0 ? fmtR(tot.invest/tot.clicks) : '—');
   set('eb-k-imp',      fmtN(tot.imp));
   set('eb-k-ctr',      tot.imp>0 ? (tot.clicks/tot.imp*100).toFixed(2)+'%' : '—');
 
-  // Daily CPL (for line)
-  const dailyCPL = dates.map(d => byDay[d].leads>0 ? +(byDay[d].invest/byDay[d].leads).toFixed(2) : null);
+  // Daily CPL com leads escalados
+  const dailyCPL = dates.map((d,i) => dailyLeadsScaled[i]>0 ? +(byDay[d].invest/dailyLeadsScaled[i]).toFixed(2) : null);
 
   // CTR diário
   const dailyCTR = dates.map(d => byDay[d].imp>0 ? +((byDay[d].clicks/byDay[d].imp)*100).toFixed(2) : null);
@@ -679,7 +683,7 @@ function renderEbook(rows, nDays){
     type:'bar',
     data:{ labels:dates, datasets:[
       { type:'line', label:'CPL (R$)', data:dailyCPL, borderColor:C.orange, backgroundColor:'rgba(249,115,22,0.06)', pointBackgroundColor:C.orange, pointRadius:4, tension:0.4, fill:false, yAxisID:'yCPL', order:1, spanGaps:true },
-      { label:'Leads Ebook', data:dates.map(d=>byDay[d].leads), backgroundColor:C.green, borderRadius:{topLeft:5,topRight:5}, stack:'s', yAxisID:'yL', order:2 },
+      { label:'Leads Ebook', data:dailyLeadsScaled, backgroundColor:C.green, borderRadius:{topLeft:5,topRight:5}, stack:'s', yAxisID:'yL', order:2 },
     ]},
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top',labels:{boxWidth:10,padding:12}}},
       scales:{
