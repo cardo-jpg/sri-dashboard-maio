@@ -365,7 +365,9 @@
           <th class="td-r sortable" data-col="imp"    onclick="sortCap('imp')">Impressões <span class="sa">↕</span></th>
           <th class="td-r sortable" data-col="clicks" onclick="sortCap('clicks')">Cliques <span class="sa">↕</span></th>
           <th class="td-r sortable" data-col="ctr"    onclick="sortCap('ctr')">CTR <span class="sa">↕</span></th>
-          <th class="td-r sortable" data-col="leads" onclick="sortCap('leads')">Leads <span class="sa">↕</span></th><th>Anúncio</th>
+          <th class="td-r sortable" data-col="leads" onclick="sortCap('leads')">Leads <span class="sa">↕</span></th>
+          <th class="td-r sortable" data-col="cpl"   onclick="sortCap('cpl')">CPL <span class="sa">↕</span></th>
+          <th>Anúncio</th>
         </tr></thead>
         <tbody id="cap-tbody"></tbody>
       </table>
@@ -823,6 +825,7 @@ function renderCaptacao(rows){
     let va,vb;
     if(cc==='leads'){ va=ra.utmLeads; vb=rb.utmLeads; }
     else if(cc==='ctr'){ va=ra.imp>0?ra.clicks/ra.imp:0; vb=rb.imp>0?rb.clicks/rb.imp:0; }
+    else if(cc==='cpl'){ va=ra.utmLeads>0?ra.invest/ra.utmLeads:Infinity; vb=rb.utmLeads>0?rb.invest/rb.utmLeads:Infinity; }
     else { va=ra[cc]||0; vb=rb[cc]||0; }
     return (va-vb)*cd;
   });
@@ -831,8 +834,12 @@ function renderCaptacao(rows){
   sortedKeys.forEach(k => {
     const r   = agg[k];
     const ctr = r.imp>0 ? (r.clicks/r.imp*100).toFixed(2)+'%' : '—';
+    const cplVal  = r.utmLeads > 0 ? r.invest / r.utmLeads : null;
     const leadsCell = r.utmLeads > 0
       ? `<strong style="color:var(--green)">${r.utmLeads}</strong>`
+      : '<span style="color:var(--sub2)">—</span>';
+    const cplCell = cplVal !== null
+      ? `<span style="color:${cplVal<=2?'var(--green)':'var(--red)'};font-weight:700">${fmtR(cplVal)}</span>`
       : '<span style="color:var(--sub2)">—</span>';
     tbody.innerHTML += `<tr>
       <td class="td-criativo">${r.criativo}</td>
@@ -843,6 +850,7 @@ function renderCaptacao(rows){
       <td class="td-r">${r.clicks||'—'}</td>
       <td class="td-r">${ctr}</td>
       <td class="td-r">${leadsCell}</td>
+      <td class="td-r">${cplCell}</td>
       <td><a href="${r.url}" target="_blank" class="ig-btn">${igIcon} Ver Ad</a></td>
     </tr>`;
   });
