@@ -594,17 +594,18 @@ function renderGauges(ebRows, capRows, nDays){
 
   // Usa leads do time (aba Leads), não do Meta
   const totalLeads = LEADS_EB + LEADS_CAP + ORG_LEADS;
-  const pctG  = +(totalLeads/(META_EB_LEADS+META_CAP_LEADS+META_ORG_LEADS)*100).toFixed(1);
-  const pctEB = +(LEADS_EB/META_EB_LEADS*100).toFixed(1);
-  const pctC  = +(LEADS_CAP/META_CAP_LEADS*100).toFixed(1);
+  const safeDiv = (a,b) => (b>0 && isFinite(a/b)) ? +((a/b)*100).toFixed(1) : 0;
+  const pctG  = safeDiv(totalLeads, META_EB_LEADS+META_CAP_LEADS+META_ORG_LEADS);
+  const pctEB = safeDiv(LEADS_EB,   META_EB_LEADS);
+  const pctC  = safeDiv(LEADS_CAP,  META_CAP_LEADS);
 
   updateGauge('g-geral',    pctG);
   updateGauge('g-ebook',    pctEB);
   updateGauge('g-captacao', pctC);
 
   set('gv-geral',   pctG+'%');
-  set('gv-ebook',   pctEB+'%');
-  set('gv-cap',     pctC+'%');
+  set('gv-ebook',   pctEB ? pctEB+'%' : '—');
+  set('gv-cap',     pctC  ? pctC+'%'  : '—');
   set('gs-atual-geral', totalLeads);
   set('gs-media-geral', (totalLeads/Math.max(1,ebDays)).toFixed(1));
   set('gs-atual-eb',  LEADS_EB);
@@ -1200,9 +1201,10 @@ async function loadFromSheets(){
     LEADS_DAILY_EB = {}; LEADS_DAILY_CAP = {}; LEADS_DAILY_ORG = {};
     let prevEB = 0, prevCap = 0, prevOrg = 0;
     parseCSV(leadsTxt).forEach(r => {
-      const org    = parseInt(r['Leads Captação Org'])||0;
-      const adsCap = parseInt(r['Leads Captação Ads'])||0;
-      const adsEB  = parseInt(r['Ebook Ads'])||0;
+      const vals2  = Object.values(r);
+      const org    = parseInt(r['Leads Captação Org'] || r['Leads Captacao Org'] || vals2[1])||0;
+      const adsCap = parseInt(r['Leads Captação Ads'] || r['Leads Captacao Ads'] || vals2[2])||0;
+      const adsEB  = parseInt(r['Ebook Ads'] || vals2[3])||0;
       if(!org && !adsCap && !adsEB) return; // linha vazia
       const date = shortDate(r['Data']||'');
       if(date){
@@ -1219,11 +1221,13 @@ async function loadFromSheets(){
 
     /* — Metas — */
     parseCSV(metasTxt).forEach(r=>{
-      const key = Object.values(r)[0];
-      const leads = parseInt(Object.values(r)[1])||0;
-      const orc   = parseMoney(Object.values(r)[2]);
-      if(key==='Ebook'){    META_EB_LEADS=leads;  META_EB_ORC=orc;  }
-      if(key==='Captação'){ META_CAP_LEADS=leads; META_CAP_ORC=orc; }
+      const vals  = Object.values(r);
+      const key   = (vals[0]||'').trim();
+      const leads = parseInt(vals[1])||0;
+      const orc   = parseMoney(vals[2]);
+      // só sobrescreve se leads > 0 (evita zerar os defaults)
+      if(/ebook/i.test(key)    && leads>0){ META_EB_LEADS=leads;  if(orc>0) META_EB_ORC=orc;  }
+      if(/capta/i.test(key)    && leads>0){ META_CAP_LEADS=leads; if(orc>0) META_CAP_ORC=orc; }
     });
 
     /* — UTM Leads Rastreáveis (captação por criativo) — */
