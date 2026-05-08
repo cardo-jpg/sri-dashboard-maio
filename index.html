@@ -661,12 +661,13 @@ function renderEbook(rows, nDays){
   const ebScaleFactor = (tot.leads > 0 && LEADS_EB > 0) ? LEADS_EB / tot.leads : 1;
   const dailyLeadsScaled = dates.map(d => Math.round((byDay[d].leads||0) * ebScaleFactor));
 
-  // KPIs — usa total real (aba Leads)
+  // KPIs — investido/cliques/impressões filtram por data; leads e CPL são fixos
+  const ebTotAll = sumRows(EB_ROWS); // total geral sem filtro, para CPL correto
   set('eb-k-invest',   fmtR(tot.invest));
   set('eb-k-invest-n', nDaysLabel);
   set('eb-k-leads',    LEADS_EB || tot.leads);
   set('eb-k-leads-n',  nDaysLabel);
-  set('eb-k-cpl',      LEADS_EB>0 ? fmtR(tot.invest/LEADS_EB) : '—');
+  set('eb-k-cpl',      LEADS_EB>0 ? fmtR(ebTotAll.invest/LEADS_EB) : '—');
   set('eb-k-clicks',   tot.clicks);
   set('eb-k-cpc',      tot.clicks>0 ? fmtR(tot.invest/tot.clicks) : '—');
   set('eb-k-imp',      fmtN(tot.imp));
@@ -768,16 +769,18 @@ function renderEbook(rows, nDays){
 function renderCaptacao(rows){
   const tot = sumRows(rows);
 
-  // KPIs
+  // KPIs — investido/cliques/impressões/CTR filtram por data; leads e CPL são fixos (aba Leads, sem data)
+  const totAll = sumRows(CAP_ROWS); // total geral sem filtro, para CPL correto
   set('cap-k-invest', fmtR(tot.invest));
   set('cap-k-clicks', tot.clicks);
   set('cap-k-cpc',    tot.clicks>0 ? fmtR(tot.invest/tot.clicks) : '—');
   set('cap-k-imp',    fmtN(tot.imp));
   set('cap-k-ctr',    tot.imp>0 ? (tot.clicks/tot.imp*100).toFixed(2)+'%' : '—');
-  // Leads dinâmico
+  // Leads e CPL: sempre total real da aba Leads (não muda com filtro de data)
   const leadsEl = R('cap-k-leads-val');
-  if(leadsEl){ leadsEl.textContent = tot.leads > 0 ? tot.leads : '—'; leadsEl.style.color = tot.leads>0?'var(--green)':'var(--sub)'; }
-  set('cap-k-leads-note', tot.leads>0 ? `CPL: ${tot.leads>0?fmtR(tot.invest/tot.leads):'—'}` : 'Sem leads ainda');
+  if(leadsEl){ leadsEl.textContent = LEADS_CAP > 0 ? LEADS_CAP : '—'; leadsEl.style.color = LEADS_CAP>0?'var(--green)':'var(--sub)'; }
+  const cplCampTotal = LEADS_CAP > 0 ? totAll.invest/LEADS_CAP : null;
+  set('cap-k-leads-note', cplCampTotal ? `CPL: ${fmtR(cplCampTotal)}` : 'Sem leads ainda');
 
   // Quality chart
   renderQuality(rows, 'cap', null);
