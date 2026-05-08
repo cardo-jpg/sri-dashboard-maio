@@ -702,24 +702,43 @@ function renderEbook(rows, nDays){
   // Quality chart
   renderQuality(rows, 'eb', nDays);
 
+  // Escalar leads do Meta proporcionalmente ao total real (aba Leads)
+  const metaTotLeads = EB_ORDER.reduce((s,n)=>s+(byCr[n]?byCr[n].leads:0),0);
+  const scaledLeads = {};
+  if(metaTotLeads > 0 && LEADS_EB > 0){
+    let allocated = 0;
+    EB_ORDER.forEach((n,i)=>{
+      if(i < EB_ORDER.length-1){
+        scaledLeads[n] = Math.round((byCr[n]?.leads||0)/metaTotLeads*LEADS_EB);
+        allocated += scaledLeads[n];
+      } else {
+        scaledLeads[n] = Math.max(0, LEADS_EB - allocated);
+      }
+    });
+  } else {
+    EB_ORDER.forEach(n=>{ scaledLeads[n] = byCr[n]?.leads||0; });
+  }
+
   // Table
   let sortedOrder = [...EB_ORDER];
   const {col:ec, dir:ed} = sortState.eb;
   if(ec) sortedOrder.sort((a,b)=>{
     const ca=byCr[a], cb=byCr[b];
     let va,vb;
-    if(ec==='cpl'){ va=ca.leads>0?ca.invest/ca.leads:Infinity; vb=cb.leads>0?cb.invest/cb.leads:Infinity; }
+    if(ec==='cpl'){ va=scaledLeads[a]>0?ca.invest/scaledLeads[a]:Infinity; vb=scaledLeads[b]>0?cb.invest/scaledLeads[b]:Infinity; }
     else if(ec==='ctr'){ va=ca.imp>0?ca.clicks/ca.imp:0; vb=cb.imp>0?cb.clicks/cb.imp:0; }
+    else if(ec==='leads'){ va=scaledLeads[a]||0; vb=scaledLeads[b]||0; }
     else { va=ca[ec]||0; vb=cb[ec]||0; }
     return (va-vb)*ed;
   });
   updSortUI('eb-thead', sortState.eb);
   const tbody = R('eb-tbody'); tbody.innerHTML='';
-  sortedOrder.forEach((nome,i) => {
-    const c = byCr[nome];
-    const cpl = c.leads>0 ? fmtR(c.invest/c.leads) : '—';
-    const ctr = c.imp>0 ? (c.clicks/c.imp*100).toFixed(2)+'%' : '—';
-    const cplN = c.leads>0 ? c.invest/c.leads : null;
+  sortedOrder.forEach((nome) => {
+    const c  = byCr[nome];
+    const sl = scaledLeads[nome]||0;
+    const cpl  = sl>0 ? fmtR(c.invest/sl) : '—';
+    const ctr  = c.imp>0 ? (c.clicks/c.imp*100).toFixed(2)+'%' : '—';
+    const cplN = sl>0 ? c.invest/sl : null;
     const badge = cplN===null
       ? `<span class="pill pill-b">Aguardando</span>`
       : cplN<=1.50
@@ -731,7 +750,7 @@ function renderEbook(rows, nDays){
       <td class="td-r">${fmtN(c.imp)}</td>
       <td class="td-r">${c.clicks}</td>
       <td class="td-r">${ctr}</td>
-      <td class="td-r">${c.leads||'—'}</td>
+      <td class="td-r">${sl||'—'}</td>
       <td class="td-r">${cpl}</td>
       <td>${badge}</td>
       <td><a href="${EB_URLS[nome]}" target="_blank" class="ig-btn">${igIcon} Ver Ad</a></td>
@@ -777,17 +796,37 @@ function renderCaptacao(rows){
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{color:C.grid}},y:{grid:{color:C.grid}}} }
   });
 
-  let sortedRows = [...rows];
+  // Agregar por (criativo, pub, camp) e aplicar leads UTM rastreáveis
+  const aggKeys = [];
+  const agg = {};
+  rows.forEach(r => {
+    const k = `${r.criativo}|${r.pub}|${r.camp}`;
+    if(!agg[k]){ agg[k]={criativo:r.criativo,pub:r.pub,camp:r.camp,url:r.url,invest:0,imp:0,clicks:0}; aggKeys.push(k); }
+    agg[k].invest+=r.invest; agg[k].imp+=r.imp; agg[k].clicks+=r.clicks;
+  });
+  aggKeys.forEach(k=>{
+    const r = agg[k];
+    r.utmLeads = UTM_CAP[`${r.criativo}|${r.pub}`] || 0;
+  });
+
+  let sortedKeys = [...aggKeys];
   const {col:cc, dir:cd} = sortState.cap;
-  if(cc) sortedRows.sort((a,b)=>{
-    const va = cc==='ctr' ? (a.imp>0?a.clicks/a.imp:0) : a[cc]||0;
-    const vb = cc==='ctr' ? (b.imp>0?b.clicks/b.imp:0) : b[cc]||0;
+  if(cc) sortedKeys.sort((a,b)=>{
+    const ra=agg[a], rb=agg[b];
+    let va,vb;
+    if(cc==='leads'){ va=ra.utmLeads; vb=rb.utmLeads; }
+    else if(cc==='ctr'){ va=ra.imp>0?ra.clicks/ra.imp:0; vb=rb.imp>0?rb.clicks/rb.imp:0; }
+    else { va=ra[cc]||0; vb=rb[cc]||0; }
     return (va-vb)*cd;
   });
   updSortUI('cap-thead', sortState.cap);
   const tbody = R('cap-tbody'); tbody.innerHTML='';
-  sortedRows.forEach(r => {
+  sortedKeys.forEach(k => {
+    const r   = agg[k];
     const ctr = r.imp>0 ? (r.clicks/r.imp*100).toFixed(2)+'%' : '—';
+    const leadsCell = r.utmLeads > 0
+      ? `<strong style="color:var(--green)">${r.utmLeads}</strong>`
+      : '<span style="color:var(--sub2)">—</span>';
     tbody.innerHTML += `<tr>
       <td class="td-criativo">${r.criativo}</td>
       <td class="td-pub">${r.pub}</td>
@@ -796,7 +835,7 @@ function renderCaptacao(rows){
       <td class="td-r">${fmtN(r.imp)}</td>
       <td class="td-r">${r.clicks||'—'}</td>
       <td class="td-r">${ctr}</td>
-      <td class="td-r">${r.leads > 0 ? `<strong style="color:var(--green)">${r.leads}</strong>` : '<span style="color:var(--sub2)">—</span>'}</td>
+      <td class="td-r">${leadsCell}</td>
       <td><a href="${r.url}" target="_blank" class="ig-btn">${igIcon} Ver Ad</a></td>
     </tr>`;
   });
@@ -1043,8 +1082,11 @@ let LEADS_CAP      = 0;
 /* ═══════════════════════════════════════
    AUTO-FETCH FROM GOOGLE SHEETS
 ═══════════════════════════════════════ */
-const SHEET_ID = '1MNmYN39x8FB8BGBQocZGAL8kDGQ4WZ5B7uAy5KazJ1c';
-const GVT      = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+const SHEET_ID   = '1MNmYN39x8FB8BGBQocZGAL8kDGQ4WZ5B7uAy5KazJ1c';
+const GVT        = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+const UTM_ID     = '1soj9HtnorvSReCmdlMktnR1HcREpy4oJRa_1VHdiIhc';
+const UTM_GVT    = `https://docs.google.com/spreadsheets/d/${UTM_ID}/gviz/tq?tqx=out:csv&gid=1813846862`;
+let   UTM_CAP    = {}; // {criativo|pub: count} — leads rastreáveis captação
 
 function csvLine(line){
   const res=[]; let cur='', inQ=false;
@@ -1090,12 +1132,13 @@ async function loadFromSheets(){
   try {
     const ts = Date.now();
     const surveyGVT = `https://docs.google.com/spreadsheets/d/${SURVEY_ID}/gviz/tq?tqx=out:csv`;
-    const [ebTxt, capTxt, metasTxt, leadsTxt, surveyTxt] = await Promise.all([
+    const [ebTxt, capTxt, metasTxt, leadsTxt, surveyTxt, utmTxt] = await Promise.all([
       fetch(GVT+'&gid=734559877&_='+ts,  {cache:'no-cache'}).then(r=>r.text()),
       fetch(GVT+'&gid=280005977&_='+ts,  {cache:'no-cache'}).then(r=>r.text()),
       fetch(GVT+'&gid=1765140443&_='+ts, {cache:'no-cache'}).then(r=>r.text()),
       fetch(GVT+'&gid=1704118724&_='+ts, {cache:'no-cache'}).then(r=>r.text()),
       fetch(surveyGVT+'&gid='+SURVEY_GID+'&_='+ts, {cache:'no-cache'}).then(r=>r.text()),
+      fetch(UTM_GVT+'&_='+ts, {cache:'no-cache'}).then(r=>r.text()),
     ]);
 
     /* — Ebook — */
@@ -1155,6 +1198,18 @@ async function loadFromSheets(){
       const orc   = parseMoney(Object.values(r)[2]);
       if(key==='Ebook'){    META_EB_LEADS=leads;  META_EB_ORC=orc;  }
       if(key==='Captação'){ META_CAP_LEADS=leads; META_CAP_ORC=orc; }
+    });
+
+    /* — UTM Leads Rastreáveis (captação por criativo) — */
+    UTM_CAP = {};
+    parseCSV(utmTxt).forEach(r => {
+      const content = (r.utm_content||'').trim();
+      const pub     = (r.utm_medium ||'').trim();
+      const camp    = (r.utm_campaign||'').trim();
+      if(!content || content==='undefined' || !camp.toLowerCase().includes('captacao')) return;
+      const criativo = mapCriativo(content);
+      const key = `${criativo}|${pub}`;
+      UTM_CAP[key] = (UTM_CAP[key]||0) + 1;
     });
 
     /* — Pesquisa — */
