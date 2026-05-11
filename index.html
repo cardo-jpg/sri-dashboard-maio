@@ -559,12 +559,12 @@ function updateGauge(id, pct){
 /* ═══════════════════════════════════════
    AGGREGATION HELPERS
 ═══════════════════════════════════════ */
-function sumRows(rows){ return rows.reduce((a,r)=>({invest:a.invest+r.invest,leads:a.leads+r.leads,clicks:a.clicks+r.clicks,imp:a.imp+r.imp,lp:a.lp+(r.lp||0)}),{invest:0,leads:0,clicks:0,imp:0,lp:0}); }
+function sumRows(rows){ return rows.reduce((a,r)=>({invest:a.invest+r.invest,leads:a.leads+r.leads,clicks:a.clicks+r.clicks,imp:a.imp+r.imp,lp:a.lp+(r.lp??0),lpClicks:a.lpClicks+(r.lp!=null?r.clicks:0)}),{invest:0,leads:0,clicks:0,imp:0,lp:0,lpClicks:0}); }
 
 function groupByDay(rows, dates){
   const m={};
-  dates.forEach(d=>m[d]={invest:0,leads:0,clicks:0,imp:0,lp:0});
-  rows.forEach(r=>{ if(m[r.date]){ m[r.date].invest+=r.invest; m[r.date].leads+=r.leads; m[r.date].clicks+=r.clicks; m[r.date].imp+=r.imp; m[r.date].lp+=(r.lp||0); } });
+  dates.forEach(d=>m[d]={invest:0,leads:0,clicks:0,imp:0,lp:0,lpClicks:0});
+  rows.forEach(r=>{ if(m[r.date]){ m[r.date].invest+=r.invest; m[r.date].leads+=r.leads; m[r.date].clicks+=r.clicks; m[r.date].imp+=r.imp; m[r.date].lp+=(r.lp??0); m[r.date].lpClicks+=(r.lp!=null?r.clicks:0); } });
   return m;
 }
 
@@ -874,7 +874,7 @@ function renderQuality(rows, prefix, nDays){
   // KPIs
   const cpm  = tot.imp>0    ? (tot.invest/tot.imp*1000) : 0;
   const ctr  = tot.imp>0    ? (tot.clicks/tot.imp*100)  : 0;
-  const conn = tot.clicks>0 ? (tot.lp/tot.clicks*100)   : 0;
+  const conn = tot.lpClicks>0 ? (tot.lp/tot.lpClicks*100) : 0;
   set(prefix+'-q-cpm',  'R$ '+cpm.toFixed(2).replace('.',','));
   set(prefix+'-q-ctr',  ctr.toFixed(2).replace('.',',')+'%');
   set(prefix+'-q-conn', conn.toFixed(1).replace('.',',')+'%');
@@ -882,7 +882,7 @@ function renderQuality(rows, prefix, nDays){
   // Daily series
   const dCPM  = dates.map(d => byDay[d].imp>0    ? +(byDay[d].invest/byDay[d].imp*1000).toFixed(2) : null);
   const dCTR  = dates.map(d => byDay[d].imp>0    ? +(byDay[d].clicks/byDay[d].imp*100).toFixed(2)  : null);
-  const dConn = dates.map(d => byDay[d].clicks>0 ? +(byDay[d].lp/byDay[d].clicks*100).toFixed(1)   : null);
+  const dConn = dates.map(d => byDay[d].lpClicks>0 ? +(byDay[d].lp/byDay[d].lpClicks*100).toFixed(1) : null);
 
   mkChart(prefix+'-quality',{
     type:'line',
@@ -1171,7 +1171,7 @@ async function loadFromSheets(){
       EB_ROWS.push({ date:shortDate(r.Date), criativo:nome, url:r.URL||'',
         invest:parseMoney(r.Investido), imp:parseInt(r.Impressoes)||0,
         clicks:parseInt(r.Cliques)||0, leads:parseInt(r.Leads)||0,
-        lp:parseInt(r.Visualizacoes_LP)||0 });
+        lp: r.Visualizacoes_LP && r.Visualizacoes_LP.trim() ? parseInt(r.Visualizacoes_LP)||0 : null });
     });
     // Rebuild EB_ORDER preserving known order, appending new
     const crSet = new Set(EB_ROWS.map(r=>r.criativo));
@@ -1187,7 +1187,7 @@ async function loadFromSheets(){
         pub:r.Publico||'', camp:extractCamp(r.Campanha||''),
         url:r.URL||'', invest:parseMoney(r.Investido),
         imp:parseInt(r.Impressoes)||0, clicks:parseInt(r.Cliques)||0, leads:parseInt(r.Leads)||0,
-        lp:parseInt(r.Visualizacoes_LP)||0 });
+        lp: r.Visualizacoes_LP && r.Visualizacoes_LP.trim() ? parseInt(r.Visualizacoes_LP)||0 : null });
     });
 
     // Rebuild ALL_DATES depois de EB e CAP atualizados
