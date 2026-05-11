@@ -1069,7 +1069,18 @@ function renderPesquisa(){
   psBar('ps-idade',    countBy(rows,SC.idade),
     ['Menos de 20 anos','20 a 24 anos','25 a 29 anos','30 a 35 anos','36 a 39 anos','40 a 44 anos','45 a 50 anos','Mais de 50 anos']);
   psDonut('ps-mora',   countBy(rows,SC.mora,2));
-  psDonut('ps-salario', countBy(rows,SC.salario));
+  const salMap = {
+    'Até 1500 reais':        'Até R$1,5k',
+    'De 1500 a 2 mil reais': 'R$1,5k – 2k',
+    'De 2 a 3 mil reais':    'R$2k – 3k',
+    'De 3 a 5 mil reais':    'R$3k – 5k',
+    'De 5 a 10 mil reais':   'R$5k – 10k',
+    'Acima de 10 mil reais': 'Acima R$10k',
+  };
+  const salRaw = countBy(rows, SC.salario);
+  const salCounts = {};
+  Object.entries(salMap).forEach(([full, abbrev]) => { if(salRaw[full]) salCounts[abbrev] = salRaw[full]; });
+  psDonut('ps-salario', salCounts);
   psBar('ps-formacao', countBy(rows,SC.formacao),
     ['Ensino médio COMPLETO','Ensino superior INCOMPLETO','Ensino superior COMPLETO','Pós-graduação INCOMPLETA','Pós-graduação COMPLETA','Mestrado/Doutorado']);
   psBar('ps-ingles',   countBy(rows,SC.ingles),
