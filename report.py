@@ -2,42 +2,42 @@ import requests, csv, io, os, json
 from datetime import datetime, timedelta
 import pytz
 
-SHEET_ID = '1MNmYN39x8FB8BGBQocZGAL8kDGQ4WZ5B7uAy5KazJ1c'
-WEBHOOK  = os.environ.get('DISCORD_WEBHOOK',
-           'https://discord.com/api/webhooks/1503448814189809734/XeNe5njFg4CK_z0YUgKncxMNZVl_6W2li-yB1wfQgsVFE1nJfKIyY1JrA4p0V4AhHaVe')
-BR_TZ    = pytz.timezone('America/Sao_Paulo')
+SHEET_ID   = '1MNmYN39x8FB8BGBQocZGAL8kDGQ4WZ5B7uAy5KazJ1c'
+SURVEY_ID  = '18wzuA-CjSiJpvVz3IS0SXf_JEDcXoL-YRTKVxYaMQ7c'
+SURVEY_GID = '191514469'
+WEBHOOK    = os.environ.get('DISCORD_WEBHOOK',
+             'https://discord.com/api/webhooks/1503448814189809734/XeNe5njFg4CK_z0YUgKncxMNZVl_6W2li-yB1wfQgsVFE1nJfKIyY1JrA4p0V4AhHaVe')
+BR_TZ      = pytz.timezone('America/Sao_Paulo')
 
 META_LEADS_DIA = 40
 META_INV_DIA   = 60.0
+CPA_META       = 1.75   # media ebook 1.50 + captacao 2.00
 CAMP_END       = datetime(2026, 5, 30, tzinfo=pytz.utc)
 
-# Emojis como escape Unicode (evita problema de encoding no Windows)
-BOOK  = '\U0001F4D8'
-CAL   = '\U0001F4C5'
-CLK   = '⏰'
-CHART = '\U0001F4CA'
-TICK  = '\U0001F39F'
-CASH  = '\U0001F4B0'
-PIN   = '\U0001F4CC'
-PTR   = '\U0001F449'
-HOUR  = '⏳'
-LINK  = '\U0001F517'
-DART  = '\U0001F3AF'
-MAG   = '\U0001F50D'
-OK    = '✅'
-WARN  = '⚠️'
-FAIL  = '❌'
-SEP   = '`' + '-'*36 + '`'
+OK   = '✅'
+WARN = '⚠️'
+FAIL = '❌'
+BOOK = '\U0001F4D8'
+CAL  = '\U0001F4C5'
+CHART= '\U0001F4CA'
+TICK = '\U0001F39F'
+CASH = '\U0001F4B0'
+PIN  = '\U0001F4CC'
+HOUR = '⏳'
+LINK = '\U0001F517'
+DART = '\U0001F3AF'
+MAG  = '\U0001F50D'
+STAR = '⭐'
+SEP  = '`' + '─' * 34 + '`'
 
-def fetch(gid):
-    url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&gid={gid}'
-    r = requests.get(url, timeout=15)
-    r.encoding = 'utf-8'
+def fetch(gid, sid=SHEET_ID):
+    url = f'https://docs.google.com/spreadsheets/d/{sid}/gviz/tq?tqx=out:csv&gid={gid}'
+    r = requests.get(url, timeout=15); r.encoding = 'utf-8'
     return list(csv.DictReader(io.StringIO(r.text)))
 
 def money(s):
     if not s: return 0.0
-    return float(s.replace('R$ ', '').replace(',', '.').strip() or 0)
+    return float(s.replace('R$ ','').replace(',','.').strip() or 0)
 
 def num(s):
     try: return int(str(s or '0').strip() or 0)
@@ -45,20 +45,49 @@ def num(s):
 
 def short(d):
     if not d: return ''
-    p = d.split('/')
-    return f"{p[0].zfill(2)}/{p[1].zfill(2)}" if len(p) >= 2 else d
+    p = d.split('/'); return f"{p[0].zfill(2)}/{p[1].zfill(2)}" if len(p)>=2 else d
 
 def agg(rows):
     inv=clk=imp=lp=lp_clk=leads=0
     for r in rows:
-        inv    += money(r.get('Investido', ''))
-        clk    += num(r.get('Cliques', ''))
-        imp    += num(r.get('Impressoes', ''))
-        leads  += num(r.get('Leads', ''))
+        inv    += money(r.get('Investido',''))
+        clk    += num(r.get('Cliques',''))
+        imp    += num(r.get('Impressoes',''))
+        leads  += num(r.get('Leads',''))
         has_lp  = bool((r.get('Visualizacoes_LP') or '').strip())
-        lp     += num(r.get('Visualizacoes_LP', '')) if has_lp else 0
-        lp_clk += num(r.get('Cliques', ''))          if has_lp else 0
+        lp     += num(r.get('Visualizacoes_LP','')) if has_lp else 0
+        lp_clk += num(r.get('Cliques',''))          if has_lp else 0
     return dict(inv=inv, clk=clk, imp=imp, lp=lp, lp_clk=lp_clk, leads=leads)
+
+def connect_rate(a):
+    return a['lp'] / a['lp_clk'] * 100 if a['lp_clk'] > 0 else 0
+
+def mql_count(rows, date_str=None):
+    total = mql = 0
+    for r in rows:
+        ts = r.get('Carimbo de data/hora', '')
+        if date_str and date_str not in ts:
+            continue
+        eng = r.get('Voce fala ingles?', r.get(
+              'Ù fala inglês?', next(
+              (v for k,v in r.items() if 'ingl' in k.lower()), ''))).lower()
+        sal = r.get('Qual a sua faixa salarial (não vamos divulgar essa informação)', next(
+              (v for k,v in r.items() if 'salarial' in k.lower() or 'faixa' in k.lower()), '')).lower()
+        total += 1
+        fluent = 'confiante' in eng or 'fluente' in eng or 'fluent' in eng
+        above2k = any(x in sal for x in ['3 a 5','5 a 10','acima','2 a 3','mais de 2',
+                                          '10 mil','15 mil','20 mil'])
+        if fluent and above2k:
+            mql += 1
+    return mql, total
+
+def pct_icon(val, meta, higher_is_better=True):
+    p = val / meta * 100 if meta else 0
+    if higher_is_better:
+        icon = OK if p >= 90 else WARN if p >= 50 else FAIL
+    else:
+        icon = OK if p <= 110 else WARN if p <= 140 else FAIL
+    return p, icon
 
 def send(content):
     payload = json.dumps({'content': content}, ensure_ascii=False).encode('utf-8')
@@ -66,134 +95,131 @@ def send(content):
     r = requests.post(WEBHOOK, data=payload, headers=headers, timeout=10)
     print(f"Discord {r.status_code}")
 
+def fmt_r(v): return f"R$ {v:.2f}".replace('.',',')
+
 def main():
     now   = datetime.now(BR_TZ)
     today = now.strftime('%d/%m')
+    yest  = (now - timedelta(days=1)).strftime('%d/%m/%Y')
 
     eb_rows  = fetch('734559877')
     cap_rows = fetch('280005977')
     ld_rows  = fetch('1704118724')
+    sv_rows  = fetch(SURVEY_GID, SURVEY_ID)
 
-    eb_hoje  = [r for r in eb_rows  if short(r.get('Date', '')) == today]
-    cap_hoje = [r for r in cap_rows if short(r.get('Date', '')) == today]
+    eb_hoje  = [r for r in eb_rows  if short(r.get('Date','')) == today]
+    cap_hoje = [r for r in cap_rows if short(r.get('Date','')) == today]
 
     if not eb_hoje and eb_rows:
-        dates = sorted({short(r.get('Date', '')) for r in eb_rows if r.get('Date', '')},
+        dates = sorted({short(r.get('Date','')) for r in eb_rows if r.get('Date','')},
                        key=lambda x: (int(x.split('/')[1]), int(x.split('/')[0])))
         latest = dates[-1] if dates else ''
-        eb_hoje  = [r for r in eb_rows  if short(r.get('Date', '')) == latest]
-        cap_hoje = [r for r in cap_rows if short(r.get('Date', '')) == latest]
+        eb_hoje  = [r for r in eb_rows  if short(r.get('Date','')) == latest]
+        cap_hoje = [r for r in cap_rows if short(r.get('Date','')) == latest]
         today = latest
 
     eb  = agg(eb_hoje)
     cap = agg(cap_hoje)
 
-    inv    = eb['inv']    + cap['inv']
-    clk    = eb['clk']    + cap['clk']
-    imp    = eb['imp']    + cap['imp']
-    lp     = eb['lp']     + cap['lp']
-    lp_clk = eb['lp_clk'] + cap['lp_clk']
+    inv    = eb['inv']  + cap['inv']
+    clk    = eb['clk']  + cap['clk']
+    imp    = eb['imp']  + cap['imp']
+    cr_eb  = connect_rate(eb)
+    cr_cap = connect_rate(cap)
 
     # Leads diarios (delta aba Leads)
     ld_data = []
     for r in ld_rows:
         vals = list(r.values())
-        o = num(r.get('Leads Captação Org') or r.get('Leads Captacao Org') or (vals[1] if len(vals) > 1 else 0))
-        c = num(r.get('Leads Captação Ads') or r.get('Leads Captacao Ads') or (vals[2] if len(vals) > 2 else 0))
-        e = num(r.get('Ebook Ads') or (vals[3] if len(vals) > 3 else 0))
-        d = short(r.get('Data', '') or (vals[0] if vals else ''))
-        if any([o, c, e]):
-            ld_data.append((d, o, c, e))
+        o = num(r.get('Leads Captação Org') or r.get('Leads Captacao Org') or (vals[1] if len(vals)>1 else 0))
+        c = num(r.get('Leads Captação Ads') or r.get('Leads Captacao Ads') or (vals[2] if len(vals)>2 else 0))
+        e = num(r.get('Ebook Ads') or (vals[3] if len(vals)>3 else 0))
+        d = short(r.get('Data','') or (vals[0] if vals else ''))
+        if any([o,c,e]): ld_data.append((d,o,c,e))
 
-    prev_o = prev_c = prev_e = 0
-    day_org = day_cap = day_eb = 0
-    tot_org = tot_cap = tot_eb = 0
-    for d, o, c, e in ld_data:
+    prev_o=prev_c=prev_e=0
+    day_org=day_cap=day_eb=0
+    tot_org=tot_cap=tot_eb=0
+    for d,o,c,e in ld_data:
         if d == today:
-            day_org = max(0, o - prev_o)
-            day_cap = max(0, c - prev_c)
-            day_eb  = max(0, e - prev_e)
-        prev_o, prev_c, prev_e = o, c, e
-        tot_org, tot_cap, tot_eb = o, c, e
+            day_org=max(0,o-prev_o); day_cap=max(0,c-prev_c); day_eb=max(0,e-prev_e)
+        prev_o,prev_c,prev_e=o,c,e
+        tot_org,tot_cap,tot_eb=o,c,e
 
     leads_dia   = day_eb + day_cap + day_org
+    paid_leads  = day_eb + day_cap          # so leads pagos para CPA
     total_leads = tot_eb + tot_cap + tot_org
 
-    cpa  = inv / leads_dia        if leads_dia > 0 else 0
-    cpm  = inv / imp * 1000       if imp > 0       else 0
-    ctr  = clk / imp * 100        if imp > 0       else 0
-    cr   = lp  / lp_clk * 100    if lp_clk > 0   else 0
-    conv = (eb['leads'] + cap['leads']) / lp * 100 if lp > 0 else 0
+    cpa  = inv / paid_leads     if paid_leads > 0 else 0
+    cpm  = inv / imp * 1000     if imp > 0        else 0
+    ctr  = clk / imp * 100      if imp > 0        else 0
 
-    days_left = max(1, (CAMP_END.replace(tzinfo=None) - now.replace(tzinfo=None)).days)
-    needed    = max(0, round((550 + 750 + 1000 - total_leads) / days_left, 1))
+    days_left = max(1,(CAMP_END.replace(tzinfo=None)-now.replace(tzinfo=None)).days)
+    needed    = max(0, round((550+750+1000-total_leads)/days_left, 1))
 
-    pct_leads = leads_dia / META_LEADS_DIA * 100
-    pct_inv   = inv / META_INV_DIA * 100 if META_INV_DIA else 0
-    cpa_meta  = META_INV_DIA / META_LEADS_DIA if META_LEADS_DIA else 0
-    pct_cpa   = cpa / cpa_meta * 100 if cpa_meta > 0 else 0
+    # Comparativo atingimento
+    p_leads, i_leads = pct_icon(leads_dia, META_LEADS_DIA, higher_is_better=True)
+    p_inv,   i_inv   = pct_icon(inv, META_INV_DIA,   higher_is_better=False)
+    p_cpa,   i_cpa   = pct_icon(cpa, CPA_META,       higher_is_better=False)
 
-    icon_l = OK   if pct_leads >= 90 else WARN if pct_leads >= 50 else FAIL
-    icon_i = OK   if pct_inv   <= 105 else WARN
-    icon_c = OK   if pct_cpa   <= 110 else FAIL
+    # MQL survey
+    mql_hoje, tot_hoje   = mql_count(sv_rows, now.strftime('%d/%m/%Y'))
+    mql_ontem, tot_ontem = mql_count(sv_rows, yest)
+    mql_pct_hoje  = mql_hoje  / tot_hoje  * 100 if tot_hoje  else 0
+    mql_pct_ontem = mql_ontem / tot_ontem * 100 if tot_ontem else 0
+    mql_delta = mql_pct_hoje - mql_pct_ontem
+    mql_icon  = OK if mql_delta >= 0 else WARN
 
-    if pct_leads >= 90:
-        leitura = f"Meta de leads batida! Campanha no ritmo certo."
-    elif pct_leads >= 50:
-        leitura = f"Verba usada ({pct_inv:.0f}%), leads abaixo da meta ({pct_leads:.0f}%). CPA acima do esperado."
-    else:
-        leitura = f"Performance abaixo: {leads_dia} de {META_LEADS_DIA} leads previstos ({pct_leads:.0f}%). Revisar criativos."
-
+    # MSG 1 — Resultados
     msg1 = '\n'.join([
-        f"{BOOK} **DIARIO DE BORDO – CAPTACAO**",
+        f"{BOOK} **DIARIO DE BORDO - CAPTACAO**",
         "**SEGUNDA RENDA INTERNACIONAL**",
-        f"{CAL} **Data:** {now.strftime('%d/%m/%Y')}  {CLK} **Fechamento do dia**",
+        f"{CAL} **Data:** {now.strftime('%d/%m/%Y')}  |  Fechamento do dia",
         "",
         SEP,
-        f"{CHART} **RESULTADOS GERAIS – DIA {today}**",
+        f"{CHART} **RESULTADOS GERAIS - DIA {today}**",
         SEP,
         f"{TICK} **Leads captados no dia:** {leads_dia}  *(EB: {day_eb} | Cap: {day_cap} | Org: {day_org})*",
-        f"{CASH} **Investimento do dia:** R$ {inv:.2f}",
-        f"{CHART} **CPA do dia:** R$ {cpa:.2f}",
-        f"{CHART} **CPM:** R$ {cpm:.2f}",
+        f"{CASH} **Investimento do dia:** {fmt_r(inv)}",
+        f"{CHART} **CPA do dia:** {fmt_r(cpa)}",
+        f"{CHART} **CPM:** {fmt_r(cpm)}",
         f"{CHART} **CTR:** {ctr:.2f}%",
-        f"{CHART} **Conversao de pagina:** {conv:.2f}%",
-        f"{CHART} **Connect Rate:** {cr:.2f}%",
+        f"{CHART} **Connect Rate Ebook:** {cr_eb:.2f}%",
+        f"{CHART} **Connect Rate Captacao:** {cr_cap:.2f}%",
+        f"{STAR} **MQL do dia:** {mql_hoje} ({mql_pct_hoje:.1f}%)  {mql_icon}  *(ontem: {mql_ontem} / {mql_pct_ontem:.1f}%)*",
+        "",
         f"{TICK} **Total de leads capturados:** {total_leads}  *(EB: {tot_eb} | Cap: {tot_cap} | Org: {tot_org})*",
     ])
 
+    # MSG 2 — Comparativo
     msg2 = '\n'.join([
         SEP,
         f"{CHART} **COMPARATIVO META DO DIA vs REALIZADO**",
         SEP,
-        "```",
-        f"{'Metrica':<14} {'Meta':>10}   {'Realizado':>10}   Ating.",
-        f"{'Investimento':<14} R${META_INV_DIA:>8.2f}   R${inv:>8.2f}   {pct_inv:.0f}%",
-        f"{'Leads':<14} {META_LEADS_DIA:>10}   {leads_dia:>10}   {pct_leads:.0f}%",
-        f"{'CPA':<14} R${cpa_meta:>8.2f}   R${cpa:>8.2f}   {pct_cpa:.0f}%",
-        "```",
-        f"{PIN} **Leitura direta:**",
-        f"{PTR} {leitura}",
+        f"{i_inv}  Investimento  |  Meta: {fmt_r(META_INV_DIA)}  |  Real: {fmt_r(inv)}  |  **{p_inv:.0f}%**",
+        f"{i_leads}  Leads         |  Meta: {META_LEADS_DIA}          |  Real: {leads_dia}     |  **{p_leads:.0f}%**",
+        f"{i_cpa}  CPA           |  Meta: {fmt_r(CPA_META)}   |  Real: {fmt_r(cpa)}  |  **{p_cpa:.0f}%**",
         "",
         f"{HOUR} **Necessario/dia para bater meta:** **{needed} leads/dia** nos proximos {days_left} dias",
         f"{LINK} [Ver Dashboard](https://cardo-jpg.github.io/sri-dashboard-maio/)",
     ])
 
+    # MSG 3 — Narrativa (gestor preenche)
     msg3 = '\n'.join([
         SEP,
         f"{PIN} **OBSERVACAO DO DIA**",
         SEP,
-        "> *[Gestor: descreva o que foi observado no dia]*",
+        "> ",
         "",
         SEP,
         f"{DART} **DECISOES TOMADAS**",
         SEP,
-        "> *[Gestor: liste as decisoes tomadas hoje]*",
+        "> ",
         "",
         SEP,
         f"{MAG} **ACOES PARA AMANHA**",
         SEP,
-        "> *[Gestor: liste as acoes prioritarias para o proximo dia]*",
+        "> ",
     ])
 
     send(msg1)
