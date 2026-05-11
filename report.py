@@ -217,8 +217,10 @@ def main():
         SEP,
         f"{TICK} **PROGRESSO DA CAMPANHA**",
         SEP,
-        f"Captados hoje: **{leads_dia}**  |  Meta: **{META_LEADS_DIA}**  |  {'Bateu! ' + OK if faltam_dia == 0 else 'Faltam **' + str(faltam_dia) + '** leads ' + FAIL}",
-        f"Acumulado: **{total_leads}** / **{META_TOTAL}** ({pct_total}%)  |  Faltam **{faltam_tot}** leads",
+        f"{'📗'} **Ebook:**    {tot_eb:>4} / 550  ({round(tot_eb/550*100,1)}%)  |  Faltam **{max(0,550-tot_eb)}**",
+        f"{'📙'} **Captacao:** {tot_cap:>4} / 750  ({round(tot_cap/750*100,1)}%)  |  Faltam **{max(0,750-tot_cap)}**",
+        f"{'📕'} **Organico:** {tot_org:>4} / 1000 ({round(tot_org/1000*100,1)}%)  |  Faltam **{max(0,1000-tot_org)}**",
+        f"**Total:**      {total_leads:>4} / {META_TOTAL} ({pct_total}%)  |  Faltam **{faltam_tot}**",
         f"{HOUR} Necessario: **{needed} leads/dia** nos proximos {days_left} dias",
         f"{LINK} [Dashboard](https://cardo-jpg.github.io/sri-dashboard-maio/)",
     ])
