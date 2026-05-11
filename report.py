@@ -158,19 +158,28 @@ def main():
     leads_dia   = day_eb + day_cap + day_org
     total_leads = tot_eb + tot_cap + tot_org
 
-    cpa_eb  = eb['inv']  / day_eb  if day_eb  > 0 else 0
-    cpa_cap = cap['inv'] / day_cap if day_cap > 0 else 0
+    # CPL usa leads da planilha da equipe (day_eb, day_cap)
+    cpl_eb  = eb['inv']  / day_eb  if day_eb  > 0 else 0
+    cpl_cap = cap['inv'] / day_cap if day_cap > 0 else 0
     cpm     = inv / imp * 1000     if imp > 0      else 0
     ctr     = clk / imp * 100      if imp > 0      else 0
 
     days_left = max(1,(CAMP_END.replace(tzinfo=None)-now.replace(tzinfo=None)).days)
-    needed    = max(0, round((550+750+1000-total_leads)/days_left, 1))
+
+    # Pace diario necessario por categoria
+    pace_eb  = round(max(0, (550  - tot_eb)  / days_left), 1)
+    pace_cap = round(max(0, (750  - tot_cap) / days_left), 1)
+    pace_org = round(max(0, (1000 - tot_org) / days_left), 1)
+    pace_tot = round(max(0, (2300 - total_leads) / days_left), 1)
+
+    def pace_icon(captado, pace):
+        return OK if captado >= pace else (WARN if captado >= pace * 0.6 else FAIL)
 
     # Comparativo atingimento
     p_leads,   i_leads   = pct_icon(leads_dia, META_LEADS_DIA, higher_is_better=True)
     p_inv,     i_inv     = pct_icon(inv,     META_INV_DIA, higher_is_better=False)
-    p_cpa_eb,  i_cpa_eb  = pct_icon(cpa_eb,  1.50,         higher_is_better=False)
-    p_cpa_cap, i_cpa_cap = pct_icon(cpa_cap, 2.00,         higher_is_better=False)
+    p_cpl_eb,  i_cpl_eb  = pct_icon(cpl_eb,  1.50,         higher_is_better=False)
+    p_cpl_cap, i_cpl_cap = pct_icon(cpl_cap, 2.00,         higher_is_better=False)
 
     # MQL survey
     mql_hoje, tot_hoje   = mql_count(sv_rows, now.strftime('%d/%m/%Y'))
@@ -194,8 +203,8 @@ def main():
         f"  \U0001F4D9 Captacao: **{day_cap}**",
         f"  \U0001F4D5 Organico: **{day_org}**",
         f"{CASH} **Investimento do dia:** {fmt_r(inv)}",
-        f"{CHART} **CPA Ebook:** {fmt_r(cpa_eb)}  (meta R$1,50) {i_cpa_eb}",
-        f"{CHART} **CPA Captacao:** {fmt_r(cpa_cap)}  (meta R$2,00) {i_cpa_cap}",
+        f"{CHART} **CPL Ebook:** {fmt_r(cpl_eb)}  (meta R$1,50) {i_cpl_eb}",
+        f"{CHART} **CPL Captacao:** {fmt_r(cpl_cap)}  (meta R$2,00) {i_cpl_cap}",
         f"{CHART} **CPM:** {fmt_r(cpm)}",
         f"{CHART} **CTR:** {ctr:.2f}%",
         f"{CHART} **Connect Rate Ebook:** {cr_eb:.2f}%",
@@ -218,17 +227,16 @@ def main():
         SEP,
         f"{i_inv}    **Invest:**        {fmt_r(META_INV_DIA)} -> {fmt_r(inv)} **({p_inv:.0f}%)**",
         f"{i_leads}  **Leads:**         {META_LEADS_DIA} -> {leads_dia} **({p_leads:.0f}%)**",
-        f"{i_cpa_eb}  **CPA Ebook:**     R$1,50 -> {fmt_r(cpa_eb)} **({p_cpa_eb:.0f}%)**",
-        f"{i_cpa_cap}  **CPA Captacao:**  R$2,00 -> {fmt_r(cpa_cap)} **({p_cpa_cap:.0f}%)**",
+        f"{i_cpl_eb}  **CPL Ebook:**     R$1,50 -> {fmt_r(cpl_eb)} **({p_cpl_eb:.0f}%)**",
+        f"{i_cpl_cap}  **CPL Captacao:**  R$2,00 -> {fmt_r(cpl_cap)} **({p_cpl_cap:.0f}%)**",
         "",
         SEP,
         f"{TICK} **PROGRESSO DA CAMPANHA**",
         SEP,
-        f"{'📗'} **Ebook:**    {tot_eb:>4} / 550  ({round(tot_eb/550*100,1)}%)  |  Faltam **{max(0,550-tot_eb)}**",
-        f"{'📙'} **Captacao:** {tot_cap:>4} / 750  ({round(tot_cap/750*100,1)}%)  |  Faltam **{max(0,750-tot_cap)}**",
-        f"{'📕'} **Organico:** {tot_org:>4} / 1000 ({round(tot_org/1000*100,1)}%)  |  Faltam **{max(0,1000-tot_org)}**",
-        f"**Total:**      {total_leads:>4} / {META_TOTAL} ({pct_total}%)  |  Faltam **{faltam_tot}**",
-        f"{HOUR} Necessario: **{needed} leads/dia** nos proximos {days_left} dias",
+        f"\U0001F4D7 **Ebook:**    captado **{day_eb}** | precisava **{pace_eb}/dia** | {pace_icon(day_eb, pace_eb)}  — total {tot_eb}/550",
+        f"\U0001F4D9 **Captacao:** captado **{day_cap}** | precisava **{pace_cap}/dia** | {pace_icon(day_cap, pace_cap)}  — total {tot_cap}/750",
+        f"\U0001F4D5 **Organico:** captado **{day_org}** | precisava **{pace_org}/dia** | {pace_icon(day_org, pace_org)}  — total {tot_org}/1000",
+        f"**Total:** {total_leads}/{META_TOTAL} ({pct_total}%)  |  Faltam **{faltam_tot}**  |  Pace: **{pace_tot}/dia**",
         f"{LINK} [Dashboard](https://cardo-jpg.github.io/sri-dashboard-maio/)",
     ])
 
