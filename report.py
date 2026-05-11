@@ -156,20 +156,21 @@ def main():
         tot_org,tot_cap,tot_eb=o,c,e
 
     leads_dia   = day_eb + day_cap + day_org
-    paid_leads  = day_eb + day_cap          # so leads pagos para CPA
     total_leads = tot_eb + tot_cap + tot_org
 
-    cpa  = inv / paid_leads     if paid_leads > 0 else 0
-    cpm  = inv / imp * 1000     if imp > 0        else 0
-    ctr  = clk / imp * 100      if imp > 0        else 0
+    cpa_eb  = eb['inv']  / day_eb  if day_eb  > 0 else 0
+    cpa_cap = cap['inv'] / day_cap if day_cap > 0 else 0
+    cpm     = inv / imp * 1000     if imp > 0      else 0
+    ctr     = clk / imp * 100      if imp > 0      else 0
 
     days_left = max(1,(CAMP_END.replace(tzinfo=None)-now.replace(tzinfo=None)).days)
     needed    = max(0, round((550+750+1000-total_leads)/days_left, 1))
 
     # Comparativo atingimento
-    p_leads, i_leads = pct_icon(leads_dia, META_LEADS_DIA, higher_is_better=True)
-    p_inv,   i_inv   = pct_icon(inv, META_INV_DIA,   higher_is_better=False)
-    p_cpa,   i_cpa   = pct_icon(cpa, CPA_META,       higher_is_better=False)
+    p_leads,   i_leads   = pct_icon(leads_dia, META_LEADS_DIA, higher_is_better=True)
+    p_inv,     i_inv     = pct_icon(inv,     META_INV_DIA, higher_is_better=False)
+    p_cpa_eb,  i_cpa_eb  = pct_icon(cpa_eb,  1.50,         higher_is_better=False)
+    p_cpa_cap, i_cpa_cap = pct_icon(cpa_cap, 2.00,         higher_is_better=False)
 
     # MQL survey
     mql_hoje, tot_hoje   = mql_count(sv_rows, now.strftime('%d/%m/%Y'))
@@ -188,16 +189,21 @@ def main():
         SEP,
         f"{CHART} **RESULTADOS GERAIS - DIA {today}**",
         SEP,
-        f"{TICK} **Leads captados no dia:** {leads_dia}  *(EB: {day_eb} | Cap: {day_cap} | Org: {day_org})*",
+        f"{TICK} **Leads captados no dia:** {leads_dia}",
+        f"  \U0001F4D7 Ebook: **{day_eb}**",
+        f"  \U0001F4D9 Captacao: **{day_cap}**",
+        f"  \U0001F4D5 Organico: **{day_org}**",
         f"{CASH} **Investimento do dia:** {fmt_r(inv)}",
-        f"{CHART} **CPA do dia:** {fmt_r(cpa)}",
+        f"{CHART} **CPA Ebook:** {fmt_r(cpa_eb)}  (meta R$1,50) {i_cpa_eb}",
+        f"{CHART} **CPA Captacao:** {fmt_r(cpa_cap)}  (meta R$2,00) {i_cpa_cap}",
         f"{CHART} **CPM:** {fmt_r(cpm)}",
         f"{CHART} **CTR:** {ctr:.2f}%",
         f"{CHART} **Connect Rate Ebook:** {cr_eb:.2f}%",
         f"{CHART} **Connect Rate Captacao:** {cr_cap:.2f}%",
         f"{STAR} **MQL do dia:** {mql_hoje} ({mql_pct_hoje:.1f}%)  {mql_icon}  *(ontem: {mql_ontem} / {mql_pct_ontem:.1f}%)*",
         "",
-        f"{TICK} **Total de leads capturados:** {total_leads}  *(EB: {tot_eb} | Cap: {tot_cap} | Org: {tot_org})*",
+        f"{TICK} **Total de leads capturados:** {total_leads}",
+        f"  \U0001F4D7 Ebook: **{tot_eb}**  |  \U0001F4D9 Captacao: **{tot_cap}**  |  \U0001F4D5 Organico: **{tot_org}**",
     ])
 
     META_TOTAL = 550 + 750 + 1000
@@ -210,9 +216,10 @@ def main():
         SEP,
         f"{CHART} **COMPARATIVO META DO DIA vs REALIZADO**",
         SEP,
-        f"{i_inv}  **Invest:** {fmt_r(META_INV_DIA)} -> {fmt_r(inv)} **({p_inv:.0f}%)**",
-        f"{i_leads}  **Leads:**  {META_LEADS_DIA} leads -> {leads_dia} leads **({p_leads:.0f}%)**",
-        f"{i_cpa}  **CPA:**    {fmt_r(CPA_META)} -> {fmt_r(cpa)} **({p_cpa:.0f}%)**",
+        f"{i_inv}    **Invest:**        {fmt_r(META_INV_DIA)} -> {fmt_r(inv)} **({p_inv:.0f}%)**",
+        f"{i_leads}  **Leads:**         {META_LEADS_DIA} -> {leads_dia} **({p_leads:.0f}%)**",
+        f"{i_cpa_eb}  **CPA Ebook:**     R$1,50 -> {fmt_r(cpa_eb)} **({p_cpa_eb:.0f}%)**",
+        f"{i_cpa_cap}  **CPA Captacao:**  R$2,00 -> {fmt_r(cpa_cap)} **({p_cpa_cap:.0f}%)**",
         "",
         SEP,
         f"{TICK} **PROGRESSO DA CAMPANHA**",
