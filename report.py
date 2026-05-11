@@ -1,4 +1,5 @@
-import requests, csv, io, os
+# -*- coding: utf-8 -*-
+import requests, csv, io, os, json
 from datetime import datetime, timedelta
 import pytz
 
@@ -42,7 +43,9 @@ def agg(rows):
     return dict(inv=inv, clk=clk, imp=imp, lp=lp, lp_clk=lp_clk, leads=leads)
 
 def send(content):
-    r = requests.post(WEBHOOK, json={'content': content}, timeout=10)
+    payload = json.dumps({'content': content}, ensure_ascii=False).encode('utf-8')
+    headers = {'Content-Type': 'application/json; charset=utf-8'}
+    r = requests.post(WEBHOOK, data=payload, headers=headers, timeout=10)
     print(f"Discord {r.status_code}")
 
 def main():
@@ -123,54 +126,55 @@ def main():
     else:
         leitura = f"Performance abaixo do esperado: {leads_dia} leads de {META_LEADS_DIA} previstos ({pct_leads:.0f}%). Revisar criativos e segmentação."
 
-    # ── MENSAGEM 1 — Resultados ──────────────────────────────────────────
-    msg1 = f"""📘 **DIÁRIO DE BORDO – CAPTAÇÃO**
-**SEGUNDA RENDA INTERNACIONAL**
-📅 **Data:** {now.strftime('%d/%m/%Y')}  ⏰ **Fechamento do dia**
+    SEP = "**" + "-" * 32 + "**"
 
-━━━━━━━━━━━━━━━━━━━━━━━━
-📊 **RESULTADOS GERAIS – DIA {today}**
-━━━━━━━━━━━━━━━━━━━━━━━━
-🎟 **Leads captados no dia:** {leads_dia} _(EB: {day_eb} | Cap: {day_cap} | Org: {day_org})_
-💰 **Investimento do dia:** R$ {inv:.2f}
-📊 **CPA do dia:** R$ {cpa:.2f}
-📊 **CPM:** R$ {cpm:.2f}
-📊 **CTR:** {ctr:.2f}%
-📊 **Conversão de página:** {conv:.2f}%
-📊 **Connect Rate:** {cr:.2f}%
-🎟 **Total de leads capturados:** {total_leads} _(EB: {tot_eb} | Cap: {tot_cap} | Org: {tot_org})_"""
+    msg1 = (
+        "📘 **DIÁRIO DE BORDO – CAPTAÇÃO**\n"
+        "**SEGUNDA RENDA INTERNACIONAL**\n"
+        f"📅 **Data:** {now.strftime('%d/%m/%Y')}  ⏰ **Fechamento do dia**\n\n"
+        + SEP + "\n"
+        f"📊 **RESULTADOS GERAIS – DIA {today}**\n"
+        + SEP + "\n"
+        f"🎟 **Leads captados no dia:** {leads_dia} *(EB: {day_eb} | Cap: {day_cap} | Org: {day_org})*\n"
+        f"💰 **Investimento do dia:** R$ {inv:.2f}\n"
+        f"📊 **CPA do dia:** R$ {cpa:.2f}\n"
+        f"📊 **CPM:** R$ {cpm:.2f}\n"
+        f"📊 **CTR:** {ctr:.2f}%\n"
+        f"📊 **Conversão de página:** {conv:.2f}%\n"
+        f"📊 **Connect Rate:** {cr:.2f}%\n"
+        f"🎟 **Total de leads capturados:** {total_leads} *(EB: {tot_eb} | Cap: {tot_cap} | Org: {tot_org})*"
+    )
 
-    # ── MENSAGEM 2 — Comparativo + Leitura ──────────────────────────────
-    msg2 = f"""━━━━━━━━━━━━━━━━━━━━━━━━
-📊 **COMPARATIVO META DO DIA vs REALIZADO**
-━━━━━━━━━━━━━━━━━━━━━━━━
-```
-Métrica        Meta            Realizado       Ating.
-Investimento   R$ {META_INV_DIA:.2f}       R$ {inv:.2f}      {pct_inv:.0f}% {icon_i}
-Leads          {META_LEADS_DIA}              {leads_dia}              {pct_leads:.0f}% {icon_l}
-CPA            R$ {cpa_meta:.2f}        R$ {cpa:.2f}       {pct_cpa:.0f}% {icon_c}
-```
-📌 **Leitura direta:**
-👉 {leitura}
+    msg2 = (
+        SEP + "\n"
+        "📊 **COMPARATIVO META DO DIA vs REALIZADO**\n"
+        + SEP + "\n"
+        "```\n"
+        f"{'Métrica':<14} {'Meta':>10}   {'Realizado':>10}   Ating.\n"
+        f"{'Investimento':<14} R$ {META_INV_DIA:>7.2f}   R$ {inv:>7.2f}   {pct_inv:.0f}% {icon_i}\n"
+        f"{'Leads':<14} {META_LEADS_DIA:>10}   {leads_dia:>10}   {pct_leads:.0f}% {icon_l}\n"
+        f"{'CPA':<14} R$ {cpa_meta:>7.2f}   R$ {cpa:>7.2f}   {pct_cpa:.0f}% {icon_c}\n"
+        "```\n"
+        "📌 **Leitura direta:**\n"
+        f"👉 {leitura}\n\n"
+        f"⏳ **Necessário/dia:** {max(0, round((550+750+1000 - total_leads)/days_left, 1))} leads/dia nos próximos {days_left} dias\n"
+        "🔗 [Ver Dashboard](https://cardo-jpg.github.io/sri-dashboard-maio/)"
+    )
 
-⏳ **Necessário/dia para bater meta:** {(max(0,(tot_eb+tot_cap+tot_org-0))):} leads acumulados · ainda precisam entrar **{max(0, round((550+750+1000 - total_leads)/days_left, 1))}** leads/dia nos próximos {days_left} dias
-🔗 [Ver Dashboard completo](https://cardo-jpg.github.io/sri-dashboard-maio/)"""
-
-    # ── MENSAGEM 3 — Seções narrativas (a preencher) ────────────────────
-    msg3 = f"""━━━━━━━━━━━━━━━━━━━━━━━━
-📌 **OBSERVAÇÃO DO DIA**
-━━━━━━━━━━━━━━━━━━━━━━━━
-> _[Gestor: descreva aqui o que foi observado e tentado durante o dia]_
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 **DECISÕES TOMADAS**
-━━━━━━━━━━━━━━━━━━━━━━━━
-> _[Gestor: liste as decisões tomadas hoje]_
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-🔍 **AÇÕES PARA AMANHÃ**
-━━━━━━━━━━━━━━━━━━━━━━━━
-> _[Gestor: liste as ações prioritárias para o próximo dia]_"""
+    msg3 = (
+        SEP + "\n"
+        "📌 **OBSERVAÇÃO DO DIA**\n"
+        + SEP + "\n"
+        "> *[Gestor: descreva o que foi observado no dia]*\n\n"
+        + SEP + "\n"
+        "🎯 **DECISÕES TOMADAS**\n"
+        + SEP + "\n"
+        "> *[Gestor: liste as decisões tomadas hoje]*\n\n"
+        + SEP + "\n"
+        "🔍 **AÇÕES PARA AMANHÃ**\n"
+        + SEP + "\n"
+        "> *[Gestor: liste as ações prioritárias para o próximo dia]*"
+    )
 
     send(msg1)
     send(msg2)
