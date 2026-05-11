@@ -47,6 +47,14 @@ def short(d):
     if not d: return ''
     p = d.split('/'); return f"{p[0].zfill(2)}/{p[1].zfill(2)}" if len(p)>=2 else d
 
+def get_lp_val(r):
+    # Tenta nome exato, depois busca parcial (LP, landing, visualiza)
+    v = r.get('Visualizacoes_LP') or r.get('Visualizações_LP') or r.get('Visualizacoes LP') or ''
+    if not v:
+        v = next((val for k, val in r.items()
+                  if any(x in k.lower() for x in ['visualiz','landing','_lp'])), '') or ''
+    return str(v).strip()
+
 def agg(rows):
     inv=clk=imp=lp=lp_clk=leads=0
     for r in rows:
@@ -54,9 +62,10 @@ def agg(rows):
         clk    += num(r.get('Cliques',''))
         imp    += num(r.get('Impressoes',''))
         leads  += num(r.get('Leads',''))
-        has_lp  = bool((r.get('Visualizacoes_LP') or '').strip())
-        lp     += num(r.get('Visualizacoes_LP','')) if has_lp else 0
-        lp_clk += num(r.get('Cliques',''))          if has_lp else 0
+        lp_raw  = get_lp_val(r)
+        has_lp  = bool(lp_raw)
+        lp     += num(lp_raw) if has_lp else 0
+        lp_clk += num(r.get('Cliques','')) if has_lp else 0
     return dict(inv=inv, clk=clk, imp=imp, lp=lp, lp_clk=lp_clk, leads=leads)
 
 def connect_rate(a):
@@ -191,17 +200,27 @@ def main():
         f"{TICK} **Total de leads capturados:** {total_leads}  *(EB: {tot_eb} | Cap: {tot_cap} | Org: {tot_org})*",
     ])
 
-    # MSG 2 — Comparativo
+    META_TOTAL = 550 + 750 + 1000
+    faltam_dia = max(0, META_LEADS_DIA - leads_dia)
+    faltam_tot = max(0, META_TOTAL - total_leads)
+    pct_total  = round(total_leads / META_TOTAL * 100, 1)
+
+    # MSG 2 — Comparativo + Progresso
     msg2 = '\n'.join([
         SEP,
         f"{CHART} **COMPARATIVO META DO DIA vs REALIZADO**",
         SEP,
-        f"{i_inv}  Investimento  |  Meta: {fmt_r(META_INV_DIA)}  |  Real: {fmt_r(inv)}  |  **{p_inv:.0f}%**",
-        f"{i_leads}  Leads         |  Meta: {META_LEADS_DIA}          |  Real: {leads_dia}     |  **{p_leads:.0f}%**",
-        f"{i_cpa}  CPA           |  Meta: {fmt_r(CPA_META)}   |  Real: {fmt_r(cpa)}  |  **{p_cpa:.0f}%**",
+        f"{i_inv}  **Invest:** {fmt_r(META_INV_DIA)} -> {fmt_r(inv)} **({p_inv:.0f}%)**",
+        f"{i_leads}  **Leads:**  {META_LEADS_DIA} leads -> {leads_dia} leads **({p_leads:.0f}%)**",
+        f"{i_cpa}  **CPA:**    {fmt_r(CPA_META)} -> {fmt_r(cpa)} **({p_cpa:.0f}%)**",
         "",
-        f"{HOUR} **Necessario/dia para bater meta:** **{needed} leads/dia** nos proximos {days_left} dias",
-        f"{LINK} [Ver Dashboard](https://cardo-jpg.github.io/sri-dashboard-maio/)",
+        SEP,
+        f"{TICK} **PROGRESSO DA CAMPANHA**",
+        SEP,
+        f"Captados hoje: **{leads_dia}**  |  Meta: **{META_LEADS_DIA}**  |  {'Bateu! ' + OK if faltam_dia == 0 else 'Faltam **' + str(faltam_dia) + '** leads ' + FAIL}",
+        f"Acumulado: **{total_leads}** / **{META_TOTAL}** ({pct_total}%)  |  Faltam **{faltam_tot}** leads",
+        f"{HOUR} Necessario: **{needed} leads/dia** nos proximos {days_left} dias",
+        f"{LINK} [Dashboard](https://cardo-jpg.github.io/sri-dashboard-maio/)",
     ])
 
     # MSG 3 — Narrativa (gestor preenche)
