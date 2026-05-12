@@ -454,7 +454,7 @@ function getFilteredDates(nDays){
   return ALL_DATES.filter(d => parseDate(d) >= cutoff);
 }
 function filterRows(rows, nDays){
-  if(!nDays) return rows;
+  if(!nDays && !customFilterDates) return rows;
   const ok = new Set(getFilteredDates(nDays));
   return rows.filter(r => ok.has(r.date));
 }
