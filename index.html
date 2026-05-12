@@ -909,7 +909,11 @@ function applyCustomRange(){
   const s = document.getElementById('date-start').value;
   const e = document.getElementById('date-end').value;
   if(!s || !e) return;
-  const startDt = new Date(s), endDt = new Date(e);
+  // Parsear em horário local para evitar offset UTC
+  const [sy,sm,sd] = s.split('-').map(Number);
+  const [ey,em,ed] = e.split('-').map(Number);
+  const startDt = new Date(sy, sm-1, sd, 0,  0,  0);
+  const endDt   = new Date(ey, em-1, ed, 23, 59, 59);
   if(startDt > endDt) return;
   document.querySelectorAll('.f-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('apply-custom').classList.add('active');
