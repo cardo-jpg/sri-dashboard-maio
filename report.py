@@ -107,9 +107,10 @@ def send(content):
 def fmt_r(v): return f"R$ {v:.2f}".replace('.',',')
 
 def main():
-    now   = datetime.now(BR_TZ)
-    today = now.strftime('%d/%m')
-    yest  = (now - timedelta(days=1)).strftime('%d/%m/%Y')
+    now      = datetime.now(BR_TZ)
+    target   = now - timedelta(days=1)          # sempre usa o dia anterior
+    today    = target.strftime('%d/%m')          # filtro de linhas da planilha
+    yest     = (now - timedelta(days=2)).strftime('%d/%m/%Y')  # comparativo MQL
 
     eb_rows  = fetch('734559877')
     cap_rows = fetch('280005977')
@@ -182,7 +183,7 @@ def main():
     p_cpl_cap, i_cpl_cap = pct_icon(cpl_cap, 2.00,         higher_is_better=False)
 
     # MQL survey
-    mql_hoje, tot_hoje   = mql_count(sv_rows, now.strftime('%d/%m/%Y'))
+    mql_hoje, tot_hoje   = mql_count(sv_rows, target.strftime('%d/%m/%Y'))
     mql_ontem, tot_ontem = mql_count(sv_rows, yest)
     mql_pct_hoje  = mql_hoje  / tot_hoje  * 100 if tot_hoje  else 0
     mql_pct_ontem = mql_ontem / tot_ontem * 100 if tot_ontem else 0
@@ -193,7 +194,7 @@ def main():
     msg1 = '\n'.join([
         f"{BOOK} **DIARIO DE BORDO - CAPTACAO**",
         "**SEGUNDA RENDA INTERNACIONAL**",
-        f"{CAL} **Data:** {now.strftime('%d/%m/%Y')}  |  Fechamento do dia",
+        f"{CAL} **Data:** {target.strftime('%d/%m/%Y')}  |  Fechamento do dia",
         "",
         SEP,
         f"{CHART} **RESULTADOS GERAIS - DIA {today}**",
