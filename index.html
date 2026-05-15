@@ -452,7 +452,7 @@ function getFilteredDates(nDays){
   if(customFilterDates) return customFilterDates;
   if(!nDays) return ALL_DATES;
   const cutoff = new Date(LATEST); cutoff.setDate(cutoff.getDate()-(nDays-1));
-  return ALL_DATES.filter(d => parseDate(d) >= cutoff);
+  return ALL_DATES.filter(d => { const dt=parseDate(d); return dt>=cutoff && dt<=LATEST; });
 }
 function filterRows(rows, nDays){
   if(!nDays && !customFilterDates) return rows;
