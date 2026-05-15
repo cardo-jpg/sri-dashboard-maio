@@ -1256,6 +1256,15 @@ async function loadFromSheets(){
       ORG_LEADS = org;
     });
 
+    // Recalcular LATEST com base no último dia que tem leads reais (aba Leads)
+    // Garante que "3 Dias" não inclua dias ainda não atualizados pela moça
+    const datesComLeads = ALL_DATES.filter(d =>
+      (LEADS_DAILY_EB[d]||0) + (LEADS_DAILY_CAP[d]||0) + (LEADS_DAILY_ORG[d]||0) > 0
+    );
+    if(datesComLeads.length > 0){
+      LATEST = parseDate(datesComLeads[datesComLeads.length-1]);
+    }
+
     /* — Metas — */
     parseCSV(metasTxt).forEach(r=>{
       const vals  = Object.values(r);
