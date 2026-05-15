@@ -1227,7 +1227,11 @@ async function loadFromSheets(){
     const dSet = new Set([...EB_ROWS.map(r=>r.date), ...CAP_ROWS.map(r=>r.date)]);
     ALL_DATES.length = 0;
     [...dSet].sort((a,b)=>parseDate(a)-parseDate(b)).forEach(d=>ALL_DATES.push(d));
-    LATEST = parseDate(ALL_DATES[ALL_DATES.length-1]);
+    // LATEST = último dia com investimento real (exclui dias sem dado ainda)
+    const datesComDado = ALL_DATES.filter(d =>
+      EB_ROWS.some(r=>r.date===d&&r.invest>0) || CAP_ROWS.some(r=>r.date===d&&r.invest>0)
+    );
+    LATEST = parseDate(datesComDado.length ? datesComDado[datesComDado.length-1] : ALL_DATES[ALL_DATES.length-1]);
 
     /* — Leads tab (acumulado por data — moça insere diariamente) — */
     LEADS_EB = 0; LEADS_CAP = 0; ORG_LEADS = 0;
