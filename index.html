@@ -589,10 +589,11 @@ function renderGauges(ebRows, capRows, nDays){
   const cap = sumRows(capRows);
   const tot = {leads: eb.leads+cap.leads, invest: eb.invest+cap.invest};
 
+  const filteredDates = getFilteredDates(nDays);
   const ebDays  = filterRows(EB_ROWS,  nDays).map(r=>r.date).filter((v,i,a)=>a.indexOf(v)===i).length || 1;
   const capDays = filterRows(CAP_ROWS, nDays).map(r=>r.date).filter((v,i,a)=>a.indexOf(v)===i).length || 1;
 
-  // Usa leads do time (aba Leads), não do Meta
+  // Leads totais da campanha (gauges sempre mostram total, não filtrado)
   const totalLeads = LEADS_EB + LEADS_CAP + ORG_LEADS;
   const safeDiv = (a,b) => (b>0 && isFinite(a/b)) ? +((a/b)*100).toFixed(1) : 0;
   const pctG  = safeDiv(totalLeads, META_EB_LEADS+META_CAP_LEADS+META_ORG_LEADS);
@@ -607,17 +608,23 @@ function renderGauges(ebRows, capRows, nDays){
   set('gv-ebook',   pctEB ? pctEB+'%' : '—');
   set('gv-cap',     pctC  ? pctC+'%'  : '—');
   set('gs-atual-geral', totalLeads);
-  set('gs-media-geral', (totalLeads/Math.max(1,ebDays)).toFixed(1));
+
+  // Média/dia usa apenas os dias do filtro (soma dos dias filtrados / nº de dias)
+  const filtEb  = filteredDates.reduce((s,d)=>s+(LEADS_DAILY_EB[d]||0),0);
+  const filtCap = filteredDates.reduce((s,d)=>s+(LEADS_DAILY_CAP[d]||0),0);
+  const filtOrg = filteredDates.reduce((s,d)=>s+(LEADS_DAILY_ORG[d]||0),0);
+  const filtN   = Math.max(1, filteredDates.length);
+  set('gs-media-geral', ((filtEb+filtCap+filtOrg)/filtN).toFixed(1));
   set('gs-atual-eb',  LEADS_EB);
-  set('gs-media-eb',  (LEADS_EB/ebDays).toFixed(1));
+  set('gs-media-eb',  (filtEb/filtN).toFixed(1));
   set('gs-atual-cap', LEADS_CAP);
-  set('gs-media-cap', capDays > 0 ? (LEADS_CAP/capDays).toFixed(1) : '0');
+  set('gs-media-cap', (filtCap/filtN).toFixed(1));
   // Orgânico
   const pctOrg = +(ORG_LEADS/META_ORG_LEADS*100).toFixed(1);
   updateGauge('g-organico', Math.max(0.5, pctOrg));
   set('gv-org', pctOrg.toFixed(1).replace('.',',')+' %');
   set('gs-atual-org', ORG_LEADS);
-  set('gs-media-org', (ORG_LEADS/Math.max(1,ebDays)).toFixed(1));
+  set('gs-media-org', (filtOrg/filtN).toFixed(1));
   // Pace diário necessário
   const CAMPAIGN_END = new Date(2026, 4, 30); // 30/mai/2026
   const daysLeft = Math.max(1, Math.ceil((CAMPAIGN_END - new Date()) / 86400000));
