@@ -333,10 +333,11 @@
       <div class="kpi c-cyan"><p class="kpi-lbl">CTR</p><p class="kpi-val white" id="cap-k-ctr">—</p><p class="kpi-note">Taxa de clique</p></div>
       <div class="kpi c-green"><p class="kpi-lbl">Leads</p><p class="kpi-val green" id="cap-k-leads-val">—</p><p class="kpi-note" id="cap-k-leads-note">Carregando…</p></div>
     </div>
-    <p class="sec">Distribuição por Público</p>
-    <div class="row2b">
-      <div class="chart-card"><p class="chart-ttl">Investimento por Público</p><p class="chart-sub">Alocação por segmentação</p><div class="chart-wrap h200"><canvas id="cap-pub-invest"></canvas></div></div>
-      <div class="chart-card"><p class="chart-ttl">Cliques por Público</p><p class="chart-sub">Performance por segmentação</p><div class="chart-wrap h200"><canvas id="cap-pub-clicks"></canvas></div></div>
+    <p class="sec">Performance Diária</p>
+    <div class="chart-card" style="margin-bottom:18px;">
+      <p class="chart-ttl">Leads por Dia · Captação + CPL</p>
+      <p class="chart-sub">Barras = leads captação · Linha = CPL diário (R$)</p>
+      <div class="chart-wrap h240"><canvas id="cap-leads-day"></canvas></div>
     </div>
     <p class="sec">Métricas de Qualidade</p>
     <div class="row2">
@@ -532,7 +533,7 @@ function sortEb(col){
 function sortCap(col){
   sortState.cap.dir = sortState.cap.col===col ? sortState.cap.dir*-1 : -1;
   sortState.cap.col = col;
-  renderCaptacao(filterRows(CAP_ROWS, currentNDays));
+  renderCaptacao(filterRows(CAP_ROWS, currentNDays), currentNDays);
 }
 
 /* ═══════════════════════════════════════
@@ -778,42 +779,53 @@ function renderEbook(rows, nDays){
 /* ═══════════════════════════════════════
    RENDER — CAPTAÇÃO TAB
 ═══════════════════════════════════════ */
-function renderCaptacao(rows){
-  const tot = sumRows(rows);
+function renderCaptacao(rows, nDays){
+  const dates  = getFilteredDates(nDays);
+  const tot    = sumRows(rows);
+  const byDay  = groupByDay(rows, dates);
 
-  // KPIs — investido/cliques/impressões/CTR filtram por data; leads e CPL são fixos (aba Leads, sem data)
-  const totAll = sumRows(CAP_ROWS); // total geral sem filtro, para CPL correto
+  // KPIs
+  const totAll = sumRows(CAP_ROWS);
   set('cap-k-invest', fmtR(tot.invest));
   set('cap-k-clicks', tot.clicks);
   set('cap-k-cpc',    tot.clicks>0 ? fmtR(tot.invest/tot.clicks) : '—');
   set('cap-k-imp',    fmtN(tot.imp));
   set('cap-k-ctr',    tot.imp>0 ? (tot.clicks/tot.imp*100).toFixed(2)+'%' : '—');
-  // Leads e CPL: sempre total real da aba Leads (não muda com filtro de data)
   const leadsEl = R('cap-k-leads-val');
   if(leadsEl){ leadsEl.textContent = LEADS_CAP > 0 ? LEADS_CAP : '—'; leadsEl.style.color = LEADS_CAP>0?'var(--green)':'var(--sub)'; }
   const cplCampTotal = LEADS_CAP > 0 ? totAll.invest/LEADS_CAP : null;
   set('cap-k-leads-note', cplCampTotal ? `CPL: ${fmtR(cplCampTotal)}` : 'Sem leads ainda');
 
+  // Gráfico de Leads por Dia (igual ao Ebook)
+  const capScaleFactor = (tot.leads > 0 && LEADS_CAP > 0) ? LEADS_CAP / tot.leads : 1;
+  const dailyLeadsCap = dates.map(d =>
+    LEADS_DAILY_CAP[d] !== undefined ? LEADS_DAILY_CAP[d] : Math.round((byDay[d].leads||0) * capScaleFactor)
+  );
+  const dailyCPLCap = dates.map((d,i) => dailyLeadsCap[i]>0 ? +(byDay[d].invest/dailyLeadsCap[i]).toFixed(2) : null);
+
+  mkChart('cap-leads-day',{
+    type:'bar',
+    data:{ labels:dates, datasets:[
+      { type:'line', label:'CPL (R$)', data:dailyCPLCap, borderColor:C.orange, backgroundColor:'rgba(249,115,22,0.06)', pointBackgroundColor:C.orange, pointRadius:4, tension:0.4, fill:false, yAxisID:'yCPL', order:1, spanGaps:true },
+      { label:'Leads Captação', data:dailyLeadsCap, backgroundColor:C.purple, borderRadius:{topLeft:5,topRight:5}, stack:'s', yAxisID:'yL', order:2 },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top',labels:{boxWidth:10,padding:12}}},
+      scales:{
+        x:{ grid:{color:C.grid}, stacked:true },
+        yL:  { position:'left',  grid:{color:C.grid}, stacked:true, ticks:{stepSize:2} },
+        yCPL:{ position:'right', grid:{drawOnChartArea:false}, ticks:{callback:v=>'R$ '+v,color:C.orange} },
+      }
+    }
+  });
+
   // Quality chart
   renderQuality(rows, 'cap', null);
 
-  // Agregar por criativo (igual ao Ebook)
+  // Agregar por criativo
   const capOrder = [...new Set(rows.map(r=>r.criativo))];
   const byCap = {};
   capOrder.forEach(n => byCap[n]={invest:0,imp:0,clicks:0,leads:0});
   rows.forEach(r=>{ byCap[r.criativo].invest+=r.invest; byCap[r.criativo].imp+=r.imp; byCap[r.criativo].clicks+=r.clicks; byCap[r.criativo].leads+=r.leads; });
-
-
-  const pubMap = groupByPub(rows);
-  const pubKeys = Object.keys(pubMap);
-  mkChart('cap-pub-invest',{
-    type:'doughnut', data:{ labels:pubKeys, datasets:[{ data:pubKeys.map(k=>+pubMap[k].invest.toFixed(2)), backgroundColor:palette, borderColor:'#131f30', borderWidth:3, hoverOffset:6 }] },
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'58%', plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:8}},tooltip:{callbacks:{label:ctx=>` R$ ${ctx.parsed.toFixed(2)}`}}} }
-  });
-  mkChart('cap-pub-clicks',{
-    type:'bar', data:{ labels:pubKeys, datasets:[{ label:'Cliques', data:pubKeys.map(k=>pubMap[k].clicks), backgroundColor:palette, borderRadius:6 }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{color:C.grid}},y:{grid:{color:C.grid}}} }
-  });
 
   // Agregar por (criativo, pub, camp) e aplicar leads UTM rastreáveis
   const aggKeys = [];
@@ -930,7 +942,7 @@ function applyCustomRange(){
   const capRows = CAP_ROWS.filter(r=>{ const dt=parseDate(r.date); return dt>=startDt && dt<=endDt; });
   renderGauges(ebRows, capRows, null);
   renderEbook(ebRows, null);
-  renderCaptacao(capRows);
+  renderCaptacao(capRows, null);
 }
 
 function applyFilter(nDays, btn){
@@ -942,7 +954,7 @@ function applyFilter(nDays, btn){
   const capRows = filterRows(CAP_ROWS, nDays);
   renderGauges(ebRows, capRows, nDays);
   renderEbook(ebRows, nDays);
-  renderCaptacao(capRows);
+  renderCaptacao(capRows, nDays);
 }
 
 /* ═══════════════════════════════════════
