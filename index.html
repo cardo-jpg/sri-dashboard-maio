@@ -1043,13 +1043,16 @@ const SC = {
   renda:     'Quando o assunto é fazer renda extra, você:',
 };
 
-function countBy(rows, key, minCount=1){
+function countBy(rows, key, minPct=0){
   const c={};
   rows.forEach(r=>{ const v=(r[key]||'').trim(); if(v) c[v]=(c[v]||0)+1; });
-  if(minCount>1){
+  if(minPct>0){
+    const total = Object.values(c).reduce((s,v)=>s+v,0)||1;
     let outros=0;
-    Object.keys(c).forEach(k=>{ if(c[k]<minCount){ outros+=c[k]; delete c[k]; } });
-    if(outros>0) c['Outros']=outros;
+    Object.keys(c).forEach(k=>{
+      if(Math.round(c[k]/total*100) < minPct){ outros+=c[k]; delete c[k]; }
+    });
+    if(Math.round(outros/total*100) >= 1) c['Outros']=outros;
   }
   return c;
 }
@@ -1126,10 +1129,10 @@ function renderPesquisa(){
     });
   }
 
-  psDonut('ps-genero', countBy(rows,SC.genero,2));
+  psDonut('ps-genero', countBy(rows,SC.genero,1));
   psBar('ps-idade',    countBy(rows,SC.idade),
     ['Menos de 20 anos','20 a 24 anos','25 a 29 anos','30 a 35 anos','36 a 39 anos','40 a 44 anos','45 a 50 anos','Mais de 50 anos']);
-  psDonut('ps-mora',   countBy(rows,SC.mora,2));
+  psDonut('ps-mora',   countBy(rows,SC.mora,1));
   const salMap = {
     'Até 1500 reais':        'Até R$1,5k',
     'De 1500 a 2 mil reais': 'R$1,5k – 2k',
@@ -1149,7 +1152,7 @@ function renderPesquisa(){
   psBar('ps-estado',   estCounts, null, 10);
   psBar('ps-instagram',countBy(rows,SC.instagram),
     ['Menos de 1 mês','Entre 1 e 3 meses','Entre 3 e 6 meses','Entre 6 meses e 1 ano','Mais de 1 ano','Mais de 2 anos','Mais de 3 anos']);
-  psDonut('ps-filhos', countBy(rows,SC.filhos,2));
+  psDonut('ps-filhos', countBy(rows,SC.filhos,1));
   psBar('ps-renda',    countBy(rows,SC.renda));
 
   // Word cloud renderizado quando a aba for aberta (não agora — aba pode estar oculta)
