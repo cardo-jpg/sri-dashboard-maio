@@ -246,17 +246,17 @@ def main():
         SEP,
         f"{PIN} **OBSERVACAO DO DIA**",
         SEP,
-        "> Vimos que o CPA do dia comecou um pouco acima do esperado e o volume ficou abaixo da meta — a captacao ficou devendo 1 lead para bater o pace do dia. Mesmo com o aumento do investimento diario, o algoritmo ainda estava ajustando a entrega com o novo orcamento, o que pode ter segurado o volume na primeira metade do dia. O ebook se manteve mais estavel e compensou parte da queda, mas nao o suficiente para fechar o dia no ritmo necessario.",
+        "> ",
         "",
         SEP,
         f"{DART} **DECISOES TOMADAS**",
         SEP,
-        "> Com base no CPA elevado e no volume abaixo do esperado, aumentamos o pace diario para recuperar o lead que ficou devendo e manter o ritmo da campanha. Optamos por manter os criativos atuais por mais um ciclo, dando tempo ao algoritmo de otimizar a entrega com o novo orcamento. Tambem acionamos o Davy para verificar os gargalos no LCP da pagina de captacao, que pode estar impactando a conversao.",
+        "> ",
         "",
         SEP,
         f"{MAG} **ACOES PARA AMANHA**",
         SEP,
-        "> Aumentamos a verba diaria e vamos monitorar o CPL nas primeiras horas para garantir que o algoritmo absorveu o novo orcamento sem perda de eficiencia. Alem disso, o Davy passou possiveis solucoes para o LCP da LP — vamos implementar as correcoes hoje para melhorar a taxa de conversao da pagina e reduzir o custo por lead nas proximas 24h.",
+        "> ",
     ])
 
     send(msg1)
