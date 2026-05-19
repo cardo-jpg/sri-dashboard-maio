@@ -1123,7 +1123,11 @@ function renderPesquisa(){
             }))
           }},
           tooltip:{callbacks:{label:ctx=>` ${ctx.parsed} resp. (${psPct(ctx.parsed,n)})`}},
-          datalabels:{ display:false }
+          datalabels:{
+            display: ctx => Math.round(ctx.dataset.data[ctx.dataIndex]/tot*100) >= 5,
+            color:'#fff', font:{size:12,weight:'bold'},
+            formatter: v => `${Math.round(v/tot*100)}%`
+          }
         }
       }
     });
