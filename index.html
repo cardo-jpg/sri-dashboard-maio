@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>[PV] Dashboard Lançamento SRI Maio</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -430,6 +431,9 @@
 /* ═══════════════════════════════════════
    CONSTANTS & HELPERS
 ═══════════════════════════════════════ */
+// Registrar datalabels globalmente mas desativado por padrão — ativado só nos psBar
+Chart.register(ChartDataLabels);
+Chart.defaults.set('plugins.datalabels', { display: false });
 const C = { cyan:'#00c6ff',cyan2:'#0072ff',green:'#00e5a0',yellow:'#ffd166',red:'#ff6b6b',purple:'#a78bfa',orange:'#f97316',sub:'#7a90a8',grid:'rgba(30,48,69,0.8)' };
 const palette = [C.cyan,C.green,C.yellow,C.purple,C.red,C.orange,'#60a5fa'];
 Chart.defaults.color = C.sub;
@@ -1072,10 +1076,26 @@ function renderPesquisa(){
 
   function psBar(id, counts, order, limit=15){
     const entries = sortedEntries(counts,order).slice(0,limit);
+    const total = entries.reduce((s,e)=>s+e[1],0)||1;
     mkChart(id,{ type:'bar',
-      data:{ labels:entries.map(e=>e[0]), datasets:[{ data:entries.map(e=>e[1]), backgroundColor:psPal.slice(0,entries.length), borderRadius:5 }] },
-      options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}},
-        scales:{ x:{grid:{color:C.grid}}, y:{grid:{color:C.grid},ticks:{font:{size:10}}} } }
+      data:{ labels:entries.map(e=>e[0]), datasets:[{
+        data:entries.map(e=>e[1]),
+        backgroundColor:psPal.slice(0,entries.length),
+        borderRadius:5,
+        datalabels:{
+          anchor:'end', align:'start',
+          color:'#fff',
+          font:{size:11,weight:'bold'},
+          formatter:(v)=>`${Math.round(v/total*100)}%`
+        }
+      }]},
+      options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+        plugins:{
+          legend:{display:false},
+          datalabels:{ display:true }
+        },
+        scales:{ x:{grid:{color:C.grid}}, y:{grid:{color:C.grid},ticks:{font:{size:10}}} }
+      }
     });
   }
   function psDonut(id, counts){
