@@ -147,14 +147,22 @@ def main():
         d = short(r.get('Data','') or (vals[0] if vals else ''))
         if any([o,c,e]): ld_data.append((d,o,c,e))
 
-    prev_o=prev_c=prev_e=0
     day_org=day_cap=day_eb=0
     tot_org=tot_cap=tot_eb=0
-    for d,o,c,e in ld_data:
-        if d == today:
-            day_org=max(0,o-prev_o); day_cap=max(0,c-prev_c); day_eb=max(0,e-prev_e)
-        prev_o,prev_c,prev_e=o,c,e
-        tot_org,tot_cap,tot_eb=o,c,e
+    today_idx = next((i for i,(d,o,c,e) in enumerate(ld_data) if d==today), None)
+    if today_idx is not None and today_idx+1 < len(ld_data):
+        # Entrada do dia seguinte - entrada de hoje = leads do dia
+        _,no,nc,ne = ld_data[today_idx+1]
+        _,to,tc,te = ld_data[today_idx]
+        day_org=max(0,no-to); day_cap=max(0,nc-tc); day_eb=max(0,ne-te)
+    elif today_idx is not None:
+        # Sem entrada posterior — usa delta da entrada anterior
+        prev_o = ld_data[today_idx-1][1] if today_idx>0 else 0
+        prev_c = ld_data[today_idx-1][2] if today_idx>0 else 0
+        prev_e = ld_data[today_idx-1][3] if today_idx>0 else 0
+        _,to,tc,te = ld_data[today_idx]
+        day_org=max(0,to-prev_o); day_cap=max(0,tc-prev_c); day_eb=max(0,te-prev_e)
+    if ld_data: _,tot_org,tot_cap,tot_eb = ld_data[-1]
 
     leads_dia   = day_eb + day_cap + day_org
     total_leads = tot_eb + tot_cap + tot_org
