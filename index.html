@@ -1046,7 +1046,11 @@ const SC = {
 function countBy(rows, key, minCount=1){
   const c={};
   rows.forEach(r=>{ const v=(r[key]||'').trim(); if(v) c[v]=(c[v]||0)+1; });
-  if(minCount>1) Object.keys(c).forEach(k=>{ if(c[k]<minCount) delete c[k]; });
+  if(minCount>1){
+    let outros=0;
+    Object.keys(c).forEach(k=>{ if(c[k]<minCount){ outros+=c[k]; delete c[k]; } });
+    if(outros>0) c['Outros']=outros;
+  }
   return c;
 }
 function sortedEntries(counts, order){
@@ -1100,11 +1104,23 @@ function renderPesquisa(){
   }
   function psDonut(id, counts){
     const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+    const tot = entries.reduce((s,e)=>s+e[1],0)||1;
     mkChart(id,{ type:'doughnut',
-      data:{ labels:entries.map(e=>e[0]), datasets:[{ data:entries.map(e=>e[1]), backgroundColor:psPal, borderColor:'#131f30', borderWidth:3, hoverOffset:8 }] },
+      data:{ labels:entries.map(e=>e[0]), datasets:[{
+        data:entries.map(e=>e[1]),
+        backgroundColor:psPal, borderColor:'#131f30', borderWidth:3, hoverOffset:8,
+        datalabels:{
+          color:'#fff', font:{size:11,weight:'bold'},
+          formatter:(v)=> v/tot*100 >= 4 ? Math.round(v/tot*100)+'%' : '',
+        }
+      }]},
       options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
-        plugins:{ legend:{position:'bottom',labels:{boxWidth:10,padding:8}},
-          tooltip:{callbacks:{label:ctx=>` ${ctx.parsed} resp. (${psPct(ctx.parsed,n)})`}} } }
+        plugins:{
+          legend:{position:'bottom',labels:{boxWidth:10,padding:8}},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.parsed} resp. (${psPct(ctx.parsed,n)})`}},
+          datalabels:{ display:true }
+        }
+      }
     });
   }
 
