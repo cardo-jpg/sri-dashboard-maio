@@ -439,10 +439,27 @@
       <div class="kpi c-cyan"><p class="kpi-lbl">Taxa de Conversão</p><p class="kpi-val white" id="vd-conv">—</p><p class="kpi-note">Visitas → Vendas</p></div>
     </div>
 
+    <p class="sec">Métricas Diárias</p>
+    <div class="row2" style="margin-bottom:18px">
+      <div class="chart-card">
+        <p class="chart-ttl">Faturamento · ROAS por Dia</p>
+        <p class="chart-sub">Evolução diária das métricas de vendas</p>
+        <div class="chart-wrap h260"><canvas id="vd-daily-chart"></canvas></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <p class="chart-ttl" style="margin-bottom:4px">Resumo do Período</p>
+        <p class="chart-sub">Médias calculadas sobre o período</p>
+        <div class="mini-kpi"><p class="mini-kpi-lbl">Faturamento</p><p class="mini-kpi-val" style="color:var(--green)" id="vd-res-fat">—</p></div>
+        <div class="mini-kpi"><p class="mini-kpi-lbl">ROAS</p><p class="mini-kpi-val" style="color:var(--cyan)" id="vd-res-roas">—</p></div>
+        <div class="mini-kpi"><p class="mini-kpi-lbl">CAC / Custo por Venda</p><p class="mini-kpi-val" style="color:var(--yellow)" id="vd-res-cac">—</p></div>
+        <div class="mini-kpi"><p class="mini-kpi-lbl">Taxa de Conversão</p><p class="mini-kpi-val" style="color:var(--text)" id="vd-res-conv">—</p></div>
+      </div>
+    </div>
+
     <p class="sec">Performance por Criativo</p>
-    <div class="row2">
-      <div class="chart-card"><p class="chart-ttl">ROAS por Criativo</p><p class="chart-sub">Retorno sobre investimento por anúncio</p><div class="chart-wrap h260"><canvas id="vd-roas-chart"></canvas></div></div>
-      <div class="chart-card"><p class="chart-ttl">Vendas por Público</p><p class="chart-sub">Distribuição por segmento de audiência</p><div class="chart-wrap h260"><canvas id="vd-pub-chart"></canvas></div></div>
+    <div class="row2b">
+      <div class="chart-card"><p class="chart-ttl">ROAS por Criativo</p><p class="chart-sub">Apenas criativos com vendas realizadas</p><div class="chart-wrap h240"><canvas id="vd-roas-chart"></canvas></div></div>
+      <div class="chart-card"><p class="chart-ttl">Vendas por Público</p><p class="chart-sub">Distribuição por segmento de audiência</p><div class="chart-wrap h240"><canvas id="vd-pub-chart"></canvas></div></div>
     </div>
 
     <p class="sec">Detalhamento por Criativo</p>
@@ -450,9 +467,10 @@
       <table>
         <thead><tr>
           <th>Criativo</th>
+          <th>Público</th>
+          <th>Campanha</th>
           <th class="td-r">Investido</th>
           <th class="td-r">Vendas</th>
-          <th class="td-r">Faturamento</th>
           <th class="td-r">ROAS</th>
           <th class="td-r">CAC</th>
           <th>Link</th>
@@ -1211,7 +1229,7 @@ let _vdRendered = false;
 function renderVendas(){
   const rows = VENDAS_ROWS;
   if(!rows.length) return;
-  if(_vdRendered){ return; } // só renderiza uma vez (dados não mudam sem reload)
+  if(_vdRendered) return;
   _vdRendered = true;
 
   const pM = s => {
@@ -1223,7 +1241,9 @@ function renderVendas(){
   };
   const pN = s => parseInt((s||'').replace(/\D/g,'')||0)||0;
   const lbl = s => s.replace(/^AD\d+_(IMG_|VID_)/,'').replace(/_/g,' ');
+  const campShort = s => (s||'').replace(/^PV_/,'').replace(/_Vendas_[A-Z]$/,'');
 
+  // Totais
   let totInv=0, totFat=0, totVendas=0, totVisitas=0;
   rows.forEach(r=>{
     totInv    += pM(r['Investimento']);
@@ -1235,33 +1255,63 @@ function renderVendas(){
   const cac  = totVendas>0 ? totInv/totVendas : 0;
   const conv = totVisitas>0 ? totVendas/totVisitas*100 : 0;
 
-  set('vd-fat',    fmtR(totFat));
-  set('vd-inv',    fmtR(totInv));
-  set('vd-vendas', totVendas);
-  set('vd-roas',   roas.toFixed(2)+'x');
-  set('vd-cac',    fmtR(cac));
-  set('vd-conv',   conv.toFixed(1)+'%');
+  set('vd-fat',      fmtR(totFat));
+  set('vd-inv',      fmtR(totInv));
+  set('vd-vendas',   totVendas);
+  set('vd-roas',     roas.toFixed(2)+'x');
+  set('vd-cac',      fmtR(cac));
+  set('vd-conv',     conv.toFixed(1)+'%');
+  set('vd-res-fat',  fmtR(totFat));
+  set('vd-res-roas', roas.toFixed(2)+'x');
+  set('vd-res-cac',  fmtR(cac));
+  set('vd-res-conv', conv.toFixed(1)+'%');
 
-  // Agregar por criativo
+  // Agregação diária
+  const byDay = {};
+  rows.forEach(r=>{
+    const d = r['Data']||'';
+    if(!d) return;
+    if(!byDay[d]) byDay[d]={inv:0,fat:0,vendas:0};
+    byDay[d].inv    += pM(r['Investimento']);
+    byDay[d].fat    += pM(r['Faturamento']);
+    byDay[d].vendas += pN(r['Vendas']);
+  });
+  const days = Object.keys(byDay).sort();
+  const dayLbls = days.map(d=>{ const [,m,dy]=d.split('-'); return `${dy}/${m}`; });
+
+  mkChart('vd-daily-chart',{type:'line',
+    data:{ labels:dayLbls, datasets:[
+      { label:'Faturamento (R$)', data:days.map(d=>byDay[d].fat),
+        borderColor:C.green, backgroundColor:'rgba(0,229,160,0.08)',
+        fill:true, tension:0.3, pointRadius:5, pointBackgroundColor:C.green, yAxisID:'yFat' },
+      { label:'ROAS', data:days.map(d=>byDay[d].inv>0?+(byDay[d].fat/byDay[d].inv).toFixed(2):0),
+        borderColor:C.cyan, borderDash:[5,4], backgroundColor:'transparent',
+        tension:0.3, pointRadius:5, pointBackgroundColor:C.cyan, yAxisID:'yRoas' }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{ legend:{display:true,labels:{boxWidth:10,padding:14,color:C.sub}}, datalabels:{display:false} },
+      scales:{
+        yFat: {position:'left',  grid:{color:C.grid}, ticks:{callback:v=>fmtR(v)}},
+        yRoas:{position:'right', grid:{display:false}, ticks:{callback:v=>v.toFixed(1)+'x'}},
+        x:    {grid:{color:C.grid}}
+      }
+    }
+  });
+
+  // Agregação por criativo (para ROAS bar)
   const byCri = {};
   rows.forEach(r=>{
     const k = r['Criativo']||'Outros';
-    if(!byCri[k]) byCri[k]={inv:0,fat:0,vendas:0,link:r['Link']||''};
+    if(!byCri[k]) byCri[k]={inv:0,fat:0,vendas:0};
     byCri[k].inv    += pM(r['Investimento']);
     byCri[k].fat    += pM(r['Faturamento']);
     byCri[k].vendas += pN(r['Vendas']);
   });
 
-  // Agregar por público
-  const byPub = {};
-  rows.forEach(r=>{
-    const k = r['Publico']||'Outros';
-    if(!byPub[k]) byPub[k]={vendas:0};
-    byPub[k].vendas += pN(r['Vendas']);
-  });
-
-  // Bar: ROAS por criativo
+  // ROAS bar — só criativos com vendas
   const criByRoas = Object.entries(byCri)
+    .filter(([,v])=>v.vendas>0)
     .map(([k,v])=>[k, v.inv>0?v.fat/v.inv:0])
     .sort((a,b)=>b[1]-a[1]).slice(0,8);
   mkChart('vd-roas-chart',{type:'bar',
@@ -1275,7 +1325,13 @@ function renderVendas(){
     }
   });
 
-  // Donut: vendas por público
+  // Donut por público
+  const byPub = {};
+  rows.forEach(r=>{
+    const k = r['Publico']||'Outros';
+    if(!byPub[k]) byPub[k]={vendas:0};
+    byPub[k].vendas += pN(r['Vendas']);
+  });
   const pubE = Object.entries(byPub).filter(e=>e[1].vendas>0).sort((a,b)=>b[1].vendas-a[1].vendas);
   const pubTot = pubE.reduce((s,e)=>s+e[1].vendas,0)||1;
   mkChart('vd-pub-chart',{type:'doughnut',
@@ -1297,20 +1353,33 @@ function renderVendas(){
     }
   });
 
-  // Tabela
+  // Tabela por (criativo + público + campanha) — estilo captação
+  const byCombo = {};
+  rows.forEach(r=>{
+    const k = `${r['Criativo']}|||${r['Publico']}|||${r['Campanha']}`;
+    if(!byCombo[k]) byCombo[k]={
+      criativo:r['Criativo']||'—', pub:r['Publico']||'—',
+      camp:r['Campanha']||'—', inv:0, fat:0, vendas:0, link:r['Link']||''
+    };
+    byCombo[k].inv    += pM(r['Investimento']);
+    byCombo[k].fat    += pM(r['Faturamento']);
+    byCombo[k].vendas += pN(r['Vendas']);
+  });
+
   const tbody = R('vd-tbody');
   if(!tbody) return;
-  const sorted = Object.entries(byCri).sort((a,b)=>b[1].fat-a[1].fat);
-  tbody.innerHTML = sorted.map(([k,v])=>{
+  const sorted = Object.values(byCombo).sort((a,b)=>b.vendas-a.vendas||b.fat-a.fat);
+  tbody.innerHTML = sorted.map(v=>{
     const roasV = v.inv>0 ? v.fat/v.inv : 0;
     const cacV  = v.vendas>0 ? v.inv/v.vendas : 0;
     const cls   = roasV>=3?'pill-g':roasV>=1?'pill-y':'pill-r';
     return `<tr>
-      <td class="td-criativo">${lbl(k)}</td>
+      <td class="td-criativo">${lbl(v.criativo)}</td>
+      <td class="td-pub">${v.pub}</td>
+      <td style="color:var(--sub);font-size:11px">${campShort(v.camp)}</td>
       <td class="td-r">${fmtR(v.inv)}</td>
       <td class="td-r">${v.vendas||'—'}</td>
-      <td class="td-r" style="color:var(--green);font-weight:700">${v.fat>0?fmtR(v.fat):'—'}</td>
-      <td class="td-r"><span class="pill ${cls}">${v.fat>0?roasV.toFixed(2)+'x':'—'}</span></td>
+      <td class="td-r"><span class="pill ${v.vendas>0?cls:'pill-r'}">${v.vendas>0?roasV.toFixed(2)+'x':'—'}</span></td>
       <td class="td-r">${v.vendas>0?fmtR(cacV):'—'}</td>
       <td>${v.link?`<a href="${v.link}" target="_blank" class="ig-btn">${igIcon} Ver</a>`:'—'}</td>
     </tr>`;
