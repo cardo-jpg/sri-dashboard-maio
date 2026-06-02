@@ -440,28 +440,25 @@
     </div>
 
     <p class="sec">Performance por Criativo</p>
-    <div class="row2b">
-      <div class="chart-card"><p class="chart-ttl">Faturamento por Criativo</p><p class="chart-sub">Top 8 por receita gerada</p><div class="chart-wrap h260"><canvas id="vd-fat-chart"></canvas></div></div>
+    <div class="row2">
       <div class="chart-card"><p class="chart-ttl">ROAS por Criativo</p><p class="chart-sub">Retorno sobre investimento por anúncio</p><div class="chart-wrap h260"><canvas id="vd-roas-chart"></canvas></div></div>
+      <div class="chart-card"><p class="chart-ttl">Vendas por Público</p><p class="chart-sub">Distribuição por segmento de audiência</p><div class="chart-wrap h260"><canvas id="vd-pub-chart"></canvas></div></div>
     </div>
 
     <p class="sec">Detalhamento por Criativo</p>
-    <div class="row2">
-      <div class="tbl-card" style="overflow-x:auto">
-        <table>
-          <thead><tr>
-            <th>Criativo</th>
-            <th class="td-r">Investido</th>
-            <th class="td-r">Vendas</th>
-            <th class="td-r">Faturamento</th>
-            <th class="td-r">ROAS</th>
-            <th class="td-r">CAC</th>
-            <th>Link</th>
-          </tr></thead>
-          <tbody id="vd-tbody"></tbody>
-        </table>
-      </div>
-      <div class="chart-card"><p class="chart-ttl">Vendas por Público</p><p class="chart-sub">Distribuição por segmento de audiência</p><div class="chart-wrap h260"><canvas id="vd-pub-chart"></canvas></div></div>
+    <div class="tbl-card" style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>Criativo</th>
+          <th class="td-r">Investido</th>
+          <th class="td-r">Vendas</th>
+          <th class="td-r">Faturamento</th>
+          <th class="td-r">ROAS</th>
+          <th class="td-r">CAC</th>
+          <th>Link</th>
+        </tr></thead>
+        <tbody id="vd-tbody"></tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -1261,19 +1258,6 @@ function renderVendas(){
     const k = r['Publico']||'Outros';
     if(!byPub[k]) byPub[k]={vendas:0};
     byPub[k].vendas += pN(r['Vendas']);
-  });
-
-  // Bar: faturamento por criativo
-  const criByFat = Object.entries(byCri).sort((a,b)=>b[1].fat-a[1].fat).slice(0,8);
-  mkChart('vd-fat-chart',{type:'bar',
-    data:{labels:criByFat.map(e=>lbl(e[0])),datasets:[{data:criByFat.map(e=>e[1].fat),
-      backgroundColor:C.green,borderRadius:5,
-      datalabels:{anchor:'end',align:'start',color:'#fff',font:{size:10,weight:'bold'},formatter:v=>fmtR(v)}
-    }]},
-    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
-      plugins:{legend:{display:false},datalabels:{display:true}},
-      scales:{x:{grid:{color:C.grid}},y:{grid:{color:C.grid},ticks:{font:{size:10}}}}
-    }
   });
 
   // Bar: ROAS por criativo
