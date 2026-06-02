@@ -1075,7 +1075,7 @@ function switchTab(name, btn){
   document.querySelector('.gauge-section').style.display = hide ? 'none' : '';
   document.querySelector('.filter-bar').style.display    = hide ? 'none' : '';
   if(name === 'pesquisa') setTimeout(renderWordCloud, 50);
-  if(name === 'vendas') renderVendas();
+  if(name === 'vendas' && VENDAS_ROWS.length) renderVendas();
 }
 
 /* ═══════════════════════════════════════
@@ -1225,12 +1225,9 @@ function renderPesquisa(){
 /* ═══════════════════════════════════════
    VENDAS
 ═══════════════════════════════════════ */
-let _vdRendered = false;
 function renderVendas(){
   const rows = VENDAS_ROWS;
   if(!rows.length) return;
-  if(_vdRendered) return;
-  _vdRendered = true;
 
   const pM = s => {
     if(!s) return 0;
@@ -1559,6 +1556,7 @@ async function loadFromSheets(){
 
     /* — Vendas — */
     VENDAS_ROWS = vendasTxt ? parseCSV(vendasTxt) : [];
+    renderVendas();
 
     /* — Pesquisa — */
     SURVEY_ROWS.length = 0;
