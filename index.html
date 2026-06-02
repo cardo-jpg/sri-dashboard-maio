@@ -164,6 +164,7 @@
     <button class="tab-btn active" onclick="switchTab('ebook',this)">📘 Facebook Ebook</button>
     <button class="tab-btn" onclick="switchTab('captacao',this)">🎯 Facebook Captação</button>
     <button class="tab-btn" onclick="switchTab('pesquisa',this)">📋 Pesquisa</button>
+    <button class="tab-btn" onclick="switchTab('vendas',this)">💰 Vendas</button>
     <span class="badge">Facebook Ads</span>
     <span class="badge live">04/05/2026</span>
   </div>
@@ -421,6 +422,46 @@
     <div class="row2b">
       <div class="chart-card"><p class="chart-ttl">Tem Filhos?</p><p class="chart-sub">Distribuição</p><div class="chart-wrap h220"><canvas id="ps-filhos"></canvas></div></div>
       <div class="chart-card"><p class="chart-ttl">Sobre Renda Extra</p><p class="chart-sub">Postura em relação à renda extra</p><div class="chart-wrap h220"><canvas id="ps-renda"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- VENDAS TAB -->
+<div id="panel-vendas" class="tab-panel">
+  <div class="container">
+    <p class="sec" style="padding-top:22px;margin-top:0">Visão Geral · Campanha de Vendas</p>
+    <div class="kpi-grid six">
+      <div class="kpi c-green"><p class="kpi-lbl">Faturamento</p><p class="kpi-val green" id="vd-fat">—</p><p class="kpi-note">Total de receita</p></div>
+      <div class="kpi c-cyan"><p class="kpi-lbl">Investido</p><p class="kpi-val cyan" id="vd-inv">—</p><p class="kpi-note">Total investido em Ads</p></div>
+      <div class="kpi c-yellow"><p class="kpi-lbl">Vendas</p><p class="kpi-val yellow" id="vd-vendas">—</p><p class="kpi-note">Total de vendas</p></div>
+      <div class="kpi c-purple"><p class="kpi-lbl">ROAS</p><p class="kpi-val purple" id="vd-roas">—</p><p class="kpi-note">Retorno sobre investimento</p></div>
+      <div class="kpi c-green"><p class="kpi-lbl">CAC / Custo por Venda</p><p class="kpi-val white" id="vd-cac">—</p><p class="kpi-note">Investido ÷ Vendas</p></div>
+      <div class="kpi c-cyan"><p class="kpi-lbl">Taxa de Conversão</p><p class="kpi-val white" id="vd-conv">—</p><p class="kpi-note">Visitas → Vendas</p></div>
+    </div>
+
+    <p class="sec">Performance por Criativo</p>
+    <div class="row2b">
+      <div class="chart-card"><p class="chart-ttl">Faturamento por Criativo</p><p class="chart-sub">Top 8 por receita gerada</p><div class="chart-wrap h260"><canvas id="vd-fat-chart"></canvas></div></div>
+      <div class="chart-card"><p class="chart-ttl">ROAS por Criativo</p><p class="chart-sub">Retorno sobre investimento por anúncio</p><div class="chart-wrap h260"><canvas id="vd-roas-chart"></canvas></div></div>
+    </div>
+
+    <p class="sec">Detalhamento por Criativo</p>
+    <div class="row2">
+      <div class="tbl-card" style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th>Criativo</th>
+            <th class="td-r">Investido</th>
+            <th class="td-r">Vendas</th>
+            <th class="td-r">Faturamento</th>
+            <th class="td-r">ROAS</th>
+            <th class="td-r">CAC</th>
+            <th>Link</th>
+          </tr></thead>
+          <tbody id="vd-tbody"></tbody>
+        </table>
+      </div>
+      <div class="chart-card"><p class="chart-ttl">Vendas por Público</p><p class="chart-sub">Distribuição por segmento de audiência</p><div class="chart-wrap h260"><canvas id="vd-pub-chart"></canvas></div></div>
     </div>
   </div>
 </div>
@@ -1015,10 +1056,11 @@ function switchTab(name, btn){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   R('panel-'+name).classList.add('active');
   btn.classList.add('active');
-  const hide = name === 'pesquisa';
+  const hide = name === 'pesquisa' || name === 'vendas';
   document.querySelector('.gauge-section').style.display = hide ? 'none' : '';
   document.querySelector('.filter-bar').style.display    = hide ? 'none' : '';
   if(name === 'pesquisa') setTimeout(renderWordCloud, 50);
+  if(name === 'vendas') renderVendas();
 }
 
 /* ═══════════════════════════════════════
@@ -1027,6 +1069,8 @@ function switchTab(name, btn){
 const SURVEY_ROWS = [];
 const SURVEY_ID  = '18wzuA-CjSiJpvVz3IS0SXf_JEDcXoL-YRTKVxYaMQ7c';
 const SURVEY_GID = '191514469';
+const VENDAS_GID = '639532557';
+let VENDAS_ROWS  = [];
 const psPal = ['#a78bfa','#c084fc','#818cf8','#60a5fa','#34d399','#fbbf24','#f87171','#fb923c','#a3e635','#f472b6'];
 
 const SC = {
@@ -1164,6 +1208,132 @@ function renderPesquisa(){
 }
 
 /* ═══════════════════════════════════════
+   VENDAS
+═══════════════════════════════════════ */
+let _vdRendered = false;
+function renderVendas(){
+  const rows = VENDAS_ROWS;
+  if(!rows.length) return;
+  if(_vdRendered){ return; } // só renderiza uma vez (dados não mudam sem reload)
+  _vdRendered = true;
+
+  const pM = s => {
+    if(!s) return 0;
+    s = (s||'').replace(/R\$\s?/,'').trim();
+    if(s.includes(',')&&s.includes('.')) s=s.replace(/\./g,'').replace(',','.');
+    else if(s.includes(',')) s=s.replace(',','.');
+    return parseFloat(s)||0;
+  };
+  const pN = s => parseInt((s||'').replace(/\D/g,'')||0)||0;
+  const lbl = s => s.replace(/^AD\d+_(IMG_|VID_)/,'').replace(/_/g,' ');
+
+  let totInv=0, totFat=0, totVendas=0, totVisitas=0;
+  rows.forEach(r=>{
+    totInv    += pM(r['Investimento']);
+    totFat    += pM(r['Faturamento']);
+    totVendas += pN(r['Vendas']);
+    totVisitas+= pN(r['Visitas no Site']);
+  });
+  const roas = totInv>0 ? totFat/totInv : 0;
+  const cac  = totVendas>0 ? totInv/totVendas : 0;
+  const conv = totVisitas>0 ? totVendas/totVisitas*100 : 0;
+
+  set('vd-fat',    fmtR(totFat));
+  set('vd-inv',    fmtR(totInv));
+  set('vd-vendas', totVendas);
+  set('vd-roas',   roas.toFixed(2)+'x');
+  set('vd-cac',    fmtR(cac));
+  set('vd-conv',   conv.toFixed(1)+'%');
+
+  // Agregar por criativo
+  const byCri = {};
+  rows.forEach(r=>{
+    const k = r['Criativo']||'Outros';
+    if(!byCri[k]) byCri[k]={inv:0,fat:0,vendas:0,link:r['Link']||''};
+    byCri[k].inv    += pM(r['Investimento']);
+    byCri[k].fat    += pM(r['Faturamento']);
+    byCri[k].vendas += pN(r['Vendas']);
+  });
+
+  // Agregar por público
+  const byPub = {};
+  rows.forEach(r=>{
+    const k = r['Publico']||'Outros';
+    if(!byPub[k]) byPub[k]={vendas:0};
+    byPub[k].vendas += pN(r['Vendas']);
+  });
+
+  // Bar: faturamento por criativo
+  const criByFat = Object.entries(byCri).sort((a,b)=>b[1].fat-a[1].fat).slice(0,8);
+  mkChart('vd-fat-chart',{type:'bar',
+    data:{labels:criByFat.map(e=>lbl(e[0])),datasets:[{data:criByFat.map(e=>e[1].fat),
+      backgroundColor:C.green,borderRadius:5,
+      datalabels:{anchor:'end',align:'start',color:'#fff',font:{size:10,weight:'bold'},formatter:v=>fmtR(v)}
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false},datalabels:{display:true}},
+      scales:{x:{grid:{color:C.grid}},y:{grid:{color:C.grid},ticks:{font:{size:10}}}}
+    }
+  });
+
+  // Bar: ROAS por criativo
+  const criByRoas = Object.entries(byCri)
+    .map(([k,v])=>[k, v.inv>0?v.fat/v.inv:0])
+    .sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mkChart('vd-roas-chart',{type:'bar',
+    data:{labels:criByRoas.map(e=>lbl(e[0])),datasets:[{data:criByRoas.map(e=>e[1]),
+      backgroundColor:C.cyan,borderRadius:5,
+      datalabels:{anchor:'end',align:'start',color:'#fff',font:{size:10,weight:'bold'},formatter:v=>v.toFixed(1)+'x'}
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false},datalabels:{display:true}},
+      scales:{x:{grid:{color:C.grid}},y:{grid:{color:C.grid},ticks:{font:{size:10}}}}
+    }
+  });
+
+  // Donut: vendas por público
+  const pubE = Object.entries(byPub).filter(e=>e[1].vendas>0).sort((a,b)=>b[1].vendas-a[1].vendas);
+  const pubTot = pubE.reduce((s,e)=>s+e[1].vendas,0)||1;
+  mkChart('vd-pub-chart',{type:'doughnut',
+    data:{labels:pubE.map(e=>e[0]),datasets:[{data:pubE.map(e=>e[1].vendas),
+      backgroundColor:psPal,borderColor:'#131f30',borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{
+        legend:{position:'bottom',labels:{boxWidth:10,padding:8,
+          generateLabels:chart=>chart.data.labels.map((l,i)=>({
+            text:`${l}  ${Math.round(chart.data.datasets[0].data[i]/pubTot*100)}%`,
+            fillStyle:psPal[i],strokeStyle:'#131f30',lineWidth:1,index:i,fontColor:'#a0b4c8'
+          }))
+        }},
+        datalabels:{
+          display:ctx=>Math.round(ctx.dataset.data[ctx.dataIndex]/pubTot*100)>=5,
+          color:'#fff',font:{size:12,weight:'bold'},formatter:v=>`${Math.round(v/pubTot*100)}%`
+        }
+      }
+    }
+  });
+
+  // Tabela
+  const tbody = R('vd-tbody');
+  if(!tbody) return;
+  const sorted = Object.entries(byCri).sort((a,b)=>b[1].fat-a[1].fat);
+  tbody.innerHTML = sorted.map(([k,v])=>{
+    const roasV = v.inv>0 ? v.fat/v.inv : 0;
+    const cacV  = v.vendas>0 ? v.inv/v.vendas : 0;
+    const cls   = roasV>=3?'pill-g':roasV>=1?'pill-y':'pill-r';
+    return `<tr>
+      <td class="td-criativo">${lbl(k)}</td>
+      <td class="td-r">${fmtR(v.inv)}</td>
+      <td class="td-r">${v.vendas||'—'}</td>
+      <td class="td-r" style="color:var(--green);font-weight:700">${v.fat>0?fmtR(v.fat):'—'}</td>
+      <td class="td-r"><span class="pill ${cls}">${v.fat>0?roasV.toFixed(2)+'x':'—'}</span></td>
+      <td class="td-r">${v.vendas>0?fmtR(cacV):'—'}</td>
+      <td>${v.link?`<a href="${v.link}" target="_blank" class="ig-btn">${igIcon} Ver</a>`:'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════
    META VARIABLES (updated from Sheets)
 ═══════════════════════════════════════ */
 let META_EB_LEADS  = 550;
@@ -1231,13 +1401,14 @@ async function loadFromSheets(){
   try {
     const ts = Date.now();
     const surveyGVT = `https://docs.google.com/spreadsheets/d/${SURVEY_ID}/gviz/tq?tqx=out:csv`;
-    const [ebTxt, capTxt, metasTxt, leadsTxt, surveyTxt, utmTxt] = await Promise.all([
+    const [ebTxt, capTxt, metasTxt, leadsTxt, surveyTxt, utmTxt, vendasTxt] = await Promise.all([
       fetch(GVT+'&gid=734559877&_='+ts,  {cache:'no-cache'}).then(r=>r.text()),
       fetch(GVT+'&gid=280005977&_='+ts,  {cache:'no-cache'}).then(r=>r.text()),
       fetch(GVT+'&gid=1765140443&_='+ts, {cache:'no-cache'}).then(r=>r.text()),
       fetch(GVT+'&gid=1704118724&_='+ts, {cache:'no-cache'}).then(r=>r.text()),
       fetch(surveyGVT+'&gid='+SURVEY_GID+'&_='+ts, {cache:'no-cache'}).then(r=>r.text()),
       fetch(UTM_GVT+'&_='+ts, {cache:'no-cache'}).then(r=>r.text()),
+      fetch(GVT+'&gid='+VENDAS_GID+'&_='+ts, {cache:'no-cache'}).then(r=>r.text()).catch(()=>''),
     ]);
 
     /* — Ebook — */
@@ -1332,6 +1503,9 @@ async function loadFromSheets(){
       const key = `${criativo}|${pub}`;
       UTM_CAP[key] = (UTM_CAP[key]||0) + 1;
     });
+
+    /* — Vendas — */
+    VENDAS_ROWS = vendasTxt ? parseCSV(vendasTxt) : [];
 
     /* — Pesquisa — */
     SURVEY_ROWS.length = 0;
