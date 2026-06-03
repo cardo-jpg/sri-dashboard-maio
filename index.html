@@ -433,7 +433,7 @@
     <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
       <div class="kpi c-cyan"><p class="kpi-lbl">Investido</p><p class="kpi-val cyan" id="vd-inv">—</p><p class="kpi-note">Total investido em Ads</p></div>
       <div class="kpi c-yellow"><p class="kpi-lbl">Vendas</p><p class="kpi-val yellow" id="vd-vendas">—</p><p class="kpi-note">Total de vendas</p></div>
-      <div class="kpi c-green"><p class="kpi-lbl">CAC / Custo por Venda</p><p class="kpi-val green" id="vd-cac">—</p><p class="kpi-note">Investido ÷ Vendas</p></div>
+      <div class="kpi c-green" id="vd-cac-card"><p class="kpi-lbl">CAC / Custo por Venda</p><p class="kpi-val" id="vd-cac">—</p><p class="kpi-note" id="vd-cac-note">Investido ÷ Vendas</p></div>
       <div class="kpi c-purple"><p class="kpi-lbl">Taxa de Conversão</p><p class="kpi-val purple" id="vd-conv">—</p><p class="kpi-note">Visitas → Vendas</p></div>
     </div>
 
@@ -1230,10 +1230,22 @@ function renderVendas(){
   const cac  = totVendas>0 ? totInv/totVendas : 0;
   const conv = totVisitas>0 ? totVendas/totVisitas*100 : 0;
 
+  const TICKET    = 597;
+  const META_CAC  = TICKET * 0.30;
+  const cacOk     = totVendas > 0 && cac < META_CAC;
+  const cacColor  = totVendas === 0 ? 'var(--sub)' : cacOk ? 'var(--green)' : 'var(--red)';
+  const cacBorder = totVendas === 0 ? '' : cacOk ? 'border-left-color:var(--green)' : 'border-left-color:var(--red)';
+
   set('vd-inv',    fmtR(totInv));
   set('vd-vendas', totVendas);
   set('vd-cac',    fmtR(cac));
   set('vd-conv',   conv.toFixed(1)+'%');
+  const cacEl = R('vd-cac'); if(cacEl) cacEl.style.color = cacColor;
+  const cacCard = R('vd-cac-card'); if(cacCard) cacCard.setAttribute('style', cacBorder);
+  const cacNote = R('vd-cac-note');
+  if(cacNote) cacNote.textContent = totVendas > 0
+    ? (cacOk ? `✅ Dentro da meta (< ${fmtR(META_CAC)} = 30% do ticket)` : `❌ Acima da meta (> ${fmtR(META_CAC)} = 30% do ticket)`)
+    : 'Investido ÷ Vendas';
 
   // Agregação por criativo
   const byCri = {};
