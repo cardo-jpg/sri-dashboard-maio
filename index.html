@@ -1407,13 +1407,16 @@ async function loadFromSheets(){
       fetch(GVT+'&gid='+VENDAS_GID+'&_='+ts, {cache:'no-cache'}).then(r=>r.text()).catch(()=>''),
     ]);
 
-    /* — Ebook — */
+    /* — Ebook — filtro: apenas até 25/05 */
     const ebData = parseCSV(ebTxt);
     EB_ROWS.length = 0;
     ebData.forEach(r=>{
+      const sd = shortDate(r.Date); // DD/MM
+      const [dd,mm] = sd.split('/').map(Number);
+      if(mm > 5 || (mm === 5 && dd > 25)) return; // ignora após 25/05
       const nome = mapCriativo(r.Criativo);
       if(r.URL) EB_URLS[nome] = r.URL;
-      EB_ROWS.push({ date:shortDate(r.Date), criativo:nome, url:r.URL||'',
+      EB_ROWS.push({ date:sd, criativo:nome, url:r.URL||'',
         invest:parseMoney(r.Investido), imp:parseInt(r.Impressoes)||0,
         clicks:parseInt(r.Cliques)||0, leads:parseInt(r.Leads)||0,
         lp: r.Visualizacoes_LP && r.Visualizacoes_LP.trim() ? parseInt(r.Visualizacoes_LP)||0 : null });
