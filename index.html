@@ -1463,15 +1463,15 @@ async function loadFromSheets(){
       if(!org && !adsCap && !adsEB) return; // linha vazia
       const date = shortDate(r['Data']||'');
       if(date){
-        LEADS_DAILY_EB[date]  = Math.max(0, adsEB  - prevEB);
-        LEADS_DAILY_CAP[date] = Math.max(0, adsCap - prevCap);
-        LEADS_DAILY_ORG[date] = Math.max(0, org    - prevOrg);
+        if(adsEB)  LEADS_DAILY_EB[date]  = Math.max(0, adsEB  - prevEB);
+        if(adsCap) LEADS_DAILY_CAP[date] = Math.max(0, adsCap - prevCap);
+        if(org)    LEADS_DAILY_ORG[date] = Math.max(0, org    - prevOrg);
       }
-      prevEB = adsEB; prevCap = adsCap; prevOrg = org;
-      // Último valor = total atual da campanha
-      LEADS_EB  = adsEB;
-      LEADS_CAP = adsCap;
-      ORG_LEADS = org;
+      // Último valor PREENCHIDO = total atual (ignora células vazias no fim,
+      // ex.: orgânico parou de ser preenchido após 29/05 mas ads/ebook continuaram)
+      if(adsEB) { prevEB  = adsEB;  LEADS_EB  = adsEB;  }
+      if(adsCap){ prevCap = adsCap; LEADS_CAP = adsCap; }
+      if(org)   { prevOrg = org;    ORG_LEADS = org;    }
     });
 
     // Recalcular LATEST com base no último dia que tem leads reais (aba Leads)
