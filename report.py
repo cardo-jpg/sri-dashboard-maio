@@ -1,12 +1,11 @@
-import requests, csv, io, os, json
+import requests, csv, io, os, json, sys
 from datetime import datetime, timedelta
 import pytz
 
 SHEET_ID   = '1MNmYN39x8FB8BGBQocZGAL8kDGQ4WZ5B7uAy5KazJ1c'
 SURVEY_ID  = '18wzuA-CjSiJpvVz3IS0SXf_JEDcXoL-YRTKVxYaMQ7c'
 SURVEY_GID = '191514469'
-WEBHOOK    = os.environ.get('DISCORD_WEBHOOK',
-             'https://discord.com/api/webhooks/1503448814189809734/XeNe5njFg4CK_z0YUgKncxMNZVl_6W2li-yB1wfQgsVFE1nJfKIyY1JrA4p0V4AhHaVe')
+WEBHOOK    = os.environ.get('DISCORD_WEBHOOK', '')   # via secret; sem ele, não envia
 BR_TZ      = pytz.timezone('America/Sao_Paulo')
 
 META_LEADS_DIA = 40
@@ -99,6 +98,9 @@ def pct_icon(val, meta, higher_is_better=True):
     return p, icon
 
 def send(content):
+    if '--dry-run' in sys.argv or not WEBHOOK:
+        print(content + '\n')
+        return
     payload = json.dumps({'content': content}, ensure_ascii=False).encode('utf-8')
     headers = {'Content-Type': 'application/json; charset=utf-8'}
     r = requests.post(WEBHOOK, data=payload, headers=headers, timeout=10)
