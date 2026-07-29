@@ -968,18 +968,25 @@ function renderQuality(rows, prefix, nDays){
    APPLY FILTER — main entry point
 ═══════════════════════════════════════ */
 function applyCustomRange(){
-  const s = document.getElementById('date-start').value;
-  const e = document.getElementById('date-end').value;
-  if(!s || !e) return;
+  const dsEl = document.getElementById('date-start');
+  const deEl = document.getElementById('date-end');
+  let s = dsEl.value, e = deEl.value;
+  if(!s || !e){ alert('Escolha as duas datas (início e fim).'); return; }
+  // Corrige automaticamente se o usuário inverteu início/fim (strings ISO comparam certo)
+  if(s > e){ const t=s; s=e; e=t; dsEl.value=s; deEl.value=e; }
   // Parsear em horário local para evitar offset UTC
   const [sy,sm,sd] = s.split('-').map(Number);
   const [ey,em,ed] = e.split('-').map(Number);
   const startDt = new Date(sy, sm-1, sd, 0,  0,  0);
   const endDt   = new Date(ey, em-1, ed, 23, 59, 59);
-  if(startDt > endDt) return;
+  const cfd = ALL_DATES.filter(d=>{ const dt=parseDate(d); return dt>=startDt && dt<=endDt; });
+  if(!cfd.length){
+    alert('Não há dados nesse período.\nO lançamento vai de '+ALL_DATES[0]+' a '+ALL_DATES[ALL_DATES.length-1]+'.');
+    return;
+  }
   document.querySelectorAll('.f-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('apply-custom').classList.add('active');
-  customFilterDates = ALL_DATES.filter(d=>{ const dt=parseDate(d); return dt>=startDt && dt<=endDt; });
+  customFilterDates = cfd;
   currentNDays = null;
   const ebRows  = EB_ROWS.filter(r =>{ const dt=parseDate(r.date); return dt>=startDt && dt<=endDt; });
   const capRows = CAP_ROWS.filter(r=>{ const dt=parseDate(r.date); return dt>=startDt && dt<=endDt; });
@@ -993,6 +1000,13 @@ function applyFilter(nDays, btn){
   currentNDays = nDays;
   document.querySelectorAll('.f-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  // Sincroniza os campos de data com o range ativo (Total reseta pro período completo)
+  const fd = getFilteredDates(nDays);
+  if(fd.length){
+    const ds=document.getElementById('date-start'), de=document.getElementById('date-end');
+    if(ds) ds.value=toInputDate(fd[0]);
+    if(de) de.value=toInputDate(fd[fd.length-1]);
+  }
   const ebRows  = filterRows(EB_ROWS,  nDays);
   const capRows = filterRows(CAP_ROWS, nDays);
   renderGauges(ebRows, capRows, nDays);
@@ -1521,8 +1535,9 @@ async function loadFromSheets(){
     // Preencher inputs de data com o range disponível
     const dsEl = document.getElementById('date-start');
     const deEl = document.getElementById('date-end');
-    if(dsEl && ALL_DATES[0]) dsEl.value = toInputDate(ALL_DATES[0]);
-    if(deEl && latest !== '—') deEl.value = toInputDate(latest);
+    // Preenche valor + trava min/max no período do lançamento (não deixa escolher datas sem dado)
+    if(dsEl && ALL_DATES[0]){ dsEl.value = toInputDate(ALL_DATES[0]); dsEl.min = toInputDate(ALL_DATES[0]); if(latest!=='—') dsEl.max = toInputDate(latest); }
+    if(deEl && latest !== '—'){ deEl.value = toInputDate(latest); deEl.min = toInputDate(ALL_DATES[0]); deEl.max = toInputDate(latest); }
 
   } catch(e){
     console.error('Sheets fetch error:', e);
