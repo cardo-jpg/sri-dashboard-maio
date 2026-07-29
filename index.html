@@ -1535,9 +1535,9 @@ async function loadFromSheets(){
     // Preencher inputs de data com o range disponível
     const dsEl = document.getElementById('date-start');
     const deEl = document.getElementById('date-end');
-    // Preenche valor + trava min/max no período do lançamento (não deixa escolher datas sem dado)
-    if(dsEl && ALL_DATES[0]){ dsEl.value = toInputDate(ALL_DATES[0]); dsEl.min = toInputDate(ALL_DATES[0]); if(latest!=='—') dsEl.max = toInputDate(latest); }
-    if(deEl && latest !== '—'){ deEl.value = toInputDate(latest); deEl.min = toInputDate(ALL_DATES[0]); deEl.max = toInputDate(latest); }
+    // Preenche o range disponível (sem travar min/max — calendário navega livre)
+    if(dsEl && ALL_DATES[0]) dsEl.value = toInputDate(ALL_DATES[0]);
+    if(deEl && latest !== '—') deEl.value = toInputDate(latest);
 
   } catch(e){
     console.error('Sheets fetch error:', e);
