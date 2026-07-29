@@ -267,6 +267,7 @@
 <div id="panel-ebook" class="tab-panel active">
   <div class="container">
     <p class="sec" style="padding-top:22px;margin-top:0">Visão Geral · PV_Cadastro_Site_Ebook_Renda</p>
+    <p style="font-size:11px;color:var(--sub);margin:-6px 0 12px;font-style:italic">⚠️ Ebook é campanha contínua (segue rodando após o lançamento). Gasto/cliques/impressões são reais até hoje; <b>Leads e CPL só foram contabilizados até 29/05</b> (fase de captação do lançamento) — em períodos após isso, o CPL não é confiável.</p>
     <div class="kpi-grid">
       <div class="kpi c-cyan"><p class="kpi-lbl">Investido</p><p class="kpi-val cyan" id="eb-k-invest">—</p><p class="kpi-note" id="eb-k-invest-n">—</p></div>
       <div class="kpi c-green"><p class="kpi-lbl">Leads</p><p class="kpi-val green" id="eb-k-leads">—</p><p class="kpi-note" id="eb-k-leads-n">—</p></div>
@@ -1424,13 +1425,11 @@ async function loadFromSheets(){
       fetch(GVT+'&gid='+VENDAS_GID+'&_='+ts, {cache:'no-cache'}).then(r=>r.text()).catch(()=>''),
     ]);
 
-    /* — Ebook — filtro: apenas até 25/05 */
+    /* — Ebook — evergreen: mostra todos os dados (campanha segue rodando após o lançamento) */
     const ebData = parseCSV(ebTxt);
     EB_ROWS.length = 0;
     ebData.forEach(r=>{
       const sd = shortDate(r.Date); // DD/MM
-      const [dd,mm] = sd.split('/').map(Number);
-      if(mm > 5 || (mm === 5 && dd > 25)) return; // ignora após 25/05
       const nome = mapCriativo(r.Criativo);
       if(r.URL) EB_URLS[nome] = r.URL;
       EB_ROWS.push({ date:sd, criativo:nome, url:r.URL||'',
