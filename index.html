@@ -840,7 +840,7 @@ function renderEbook(rows, nDays){
         ? `<span class="pill pill-g">Abaixo da meta</span>`
         : `<span class="pill pill-r">Acima da meta</span>`;
     tbody.innerHTML += `<tr>
-      <td class="td-criativo">${nome}${apPill}</td>
+      <td class="td-criativo" style="max-width:260px"><div style="display:flex;align-items:center;gap:6px;min-width:0"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${nome}">${nome}</span>${apPill}</div></td>
       <td class="td-r">${fmtR(c.invest)}</td>
       <td class="td-r">${fmtN(c.imp)}</td>
       <td class="td-r">${c.clicks}</td>
