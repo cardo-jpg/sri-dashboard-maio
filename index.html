@@ -309,6 +309,12 @@
     </div>
 
     <p class="sec">Detalhamento por Criativo</p>
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="f-btn active" id="ebf-todos" onclick="setEbApFilter('todos',this)">Todos <span id="ebf-c-todos"></span></button>
+      <button class="f-btn" id="ebf-ativo" onclick="setEbApFilter('ACTIVE',this)">Ativos <span id="ebf-c-ativo"></span></button>
+      <button class="f-btn" id="ebf-reprov" onclick="setEbApFilter('DISAPPROVED',this)">Reprovados <span id="ebf-c-reprov"></span></button>
+      <button class="f-btn" id="ebf-sem" onclick="setEbApFilter('sem',this)">Sem status <span id="ebf-c-sem"></span></button>
+    </div>
     <div class="tbl-card">
       <table>
         <thead id="eb-thead"><tr>
@@ -705,6 +711,14 @@ function renderGauges(ebRows, capRows, nDays){
 /* ═══════════════════════════════════════
    RENDER — EBOOK TAB
 ═══════════════════════════════════════ */
+// Filtro de status de aprovação do ebook (todos | ACTIVE | DISAPPROVED | sem)
+let _ebApFilter='todos';
+function setEbApFilter(f,btn){
+  _ebApFilter=f;
+  ['ebf-todos','ebf-ativo','ebf-reprov','ebf-sem'].forEach(id=>{ const b=document.getElementById(id); if(b) b.classList.remove('active'); });
+  if(btn) btn.classList.add('active');
+  renderEbook(filterRows(EB_ROWS, currentNDays), currentNDays);
+}
 function renderEbook(rows, nDays){
   const dates = getFilteredDates(nDays);
   const tot   = sumRows(rows);
@@ -794,8 +808,27 @@ function renderEbook(rows, nDays){
     return (va-vb)*ed;
   });
   updSortUI('eb-thead', sortState.eb);
+  // Status de aprovação (Meta) por criativo — pega o mais recente da planilha
+  const ebStatus = {};
+  EB_ROWS.slice().sort((a,b)=>parseDate(a.date)-parseDate(b.date)).forEach(r=>{ if(r.status) ebStatus[r.criativo]=r.status; });
+  // Contadores do filtro (sobre todos os criativos)
+  const apCnt={todos:sortedOrder.length,ACTIVE:0,DISAPPROVED:0,sem:0};
+  sortedOrder.forEach(n=>{ const s=ebStatus[n]; if(s==='ACTIVE')apCnt.ACTIVE++; else if(s==='DISAPPROVED')apCnt.DISAPPROVED++; else apCnt.sem++; });
+  set('ebf-c-todos','('+apCnt.todos+')'); set('ebf-c-ativo','('+apCnt.ACTIVE+')'); set('ebf-c-reprov','('+apCnt.DISAPPROVED+')'); set('ebf-c-sem','('+apCnt.sem+')');
   const tbody = R('eb-tbody'); tbody.innerHTML='';
+  let _shown=0;
   sortedOrder.forEach((nome) => {
+    const apSt = ebStatus[nome]||'';
+    // aplica filtro de status
+    if(_ebApFilter==='ACTIVE' && apSt!=='ACTIVE') return;
+    if(_ebApFilter==='DISAPPROVED' && apSt!=='DISAPPROVED') return;
+    if(_ebApFilter==='sem' && apSt) return;
+    _shown++;
+    const apPill = apSt==='ACTIVE'
+      ? '<span style="background:rgba(0,229,160,.12);color:var(--green);border:1px solid rgba(0,229,160,.25);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;margin-left:8px;white-space:nowrap">● Ativo</span>'
+      : apSt==='DISAPPROVED'
+        ? '<span style="background:rgba(255,107,107,.1);color:var(--red);border:1px solid rgba(255,107,107,.2);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;margin-left:8px;white-space:nowrap">✕ Reprovado</span>'
+        : '';
     const c  = byCr[nome];
     const sl = scaledLeads[nome]||0;
     const cpl  = sl>0 ? fmtR(c.invest/sl) : '—';
@@ -807,7 +840,7 @@ function renderEbook(rows, nDays){
         ? `<span class="pill pill-g">Abaixo da meta</span>`
         : `<span class="pill pill-r">Acima da meta</span>`;
     tbody.innerHTML += `<tr>
-      <td class="td-criativo">${nome}</td>
+      <td class="td-criativo">${nome}${apPill}</td>
       <td class="td-r">${fmtR(c.invest)}</td>
       <td class="td-r">${fmtN(c.imp)}</td>
       <td class="td-r">${c.clicks}</td>
@@ -818,6 +851,7 @@ function renderEbook(rows, nDays){
       <td><a href="${EB_URLS[nome]}" target="_blank" class="ig-btn">${igIcon} Ver Ad</a></td>
     </tr>`;
   });
+  if(_shown===0) tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--sub);padding:20px">Nenhum criativo com esse status.</td></tr>';
 }
 
 /* ═══════════════════════════════════════
@@ -1432,7 +1466,7 @@ async function loadFromSheets(){
       const sd = shortDate(r.Date); // DD/MM
       const nome = mapCriativo(r.Criativo);
       if(r.URL) EB_URLS[nome] = r.URL;
-      EB_ROWS.push({ date:sd, criativo:nome, url:r.URL||'',
+      EB_ROWS.push({ date:sd, criativo:nome, url:r.URL||'', publico:(r.Publico||'').trim(), status:(r.Status||'').trim(),
         invest:parseMoney(r.Investido), imp:parseInt(r.Impressoes)||0,
         clicks:parseInt(r.Cliques)||0, leads:parseInt(r.Leads)||0,
         lp: r.Visualizacoes_LP && r.Visualizacoes_LP.trim() ? parseInt(r.Visualizacoes_LP)||0 : null });
